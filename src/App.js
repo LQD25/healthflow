@@ -1,0 +1,445 @@
+import { useState } from "react";
+
+const G = {
+  green: { bg: "#EAF3DE", mid: "#639922", dark: "#27500A", light: "#C0DD97" },
+  teal: { bg: "#E1F5EE", mid: "#1D9E75", dark: "#085041", light: "#9FE1CB" },
+  amber: { bg: "#FAEEDA", mid: "#BA7517", dark: "#633806", light: "#FAC775" },
+  blue: { bg: "#E6F1FB", mid: "#185FA5", dark: "#0C447C", light: "#B5D4F4" },
+  gray: { bg: "#F1EFE8", mid: "#5F5E5A", dark: "#2C2C2A", light: "#D3D1C7" },
+};
+
+const RECIPES = [
+  {
+    id: 1, name: "清炒西兰花", cal: 85, time: "15分钟", tag: "低卡",
+    color: G.green, emoji: "🥦",
+    ingredients: ["西兰花 300g", "大蒜 3瓣", "盐 适量", "橄榄油 1勺"],
+    steps: ["西兰花洗净切小朵，焯水2分钟", "热锅倒油，爆香蒜末", "放入西兰花大火翻炒2分钟", "加盐调味出锅"],
+    protein: 5.6, carb: 8.2, fat: 3.1,
+  },
+  {
+    id: 2, name: "番茄炒鸡蛋", cal: 168, time: "10分钟", tag: "家常",
+    color: G.amber, emoji: "🍅",
+    ingredients: ["鸡蛋 3个", "番茄 2个", "盐 适量", "糖 少许", "食用油 1勺"],
+    steps: ["鸡蛋打散，番茄切块", "热锅炒鸡蛋至半熟盛出", "同锅炒番茄，出汁后加鸡蛋", "加盐、糖调味翻炒均匀"],
+    protein: 13.2, carb: 10.5, fat: 8.4,
+  },
+  {
+    id: 3, name: "清蒸鲈鱼", cal: 142, time: "25分钟", tag: "高蛋白",
+    color: G.teal, emoji: "🐟",
+    ingredients: ["鲈鱼 1条(约500g)", "姜 5片", "葱 2根", "蒸鱼豉油 2勺", "热油 少许"],
+    steps: ["鲈鱼洗净，背部划刀，塞入姜片", "蒸锅上汽后蒸8-10分钟", "倒掉蒸出的水，铺上葱丝", "淋上豉油，浇热油激香"],
+    protein: 26.4, carb: 0.8, fat: 4.2,
+  },
+  {
+    id: 4, name: "紫菜蛋花汤", cal: 55, time: "8分钟", tag: "低卡",
+    color: G.blue, emoji: "🍜",
+    ingredients: ["紫菜 10g", "鸡蛋 1个", "盐 适量", "香油 几滴", "葱花 少许"],
+    steps: ["锅中烧水，水开后放入紫菜", "鸡蛋打散，缓慢倒入锅中", "加盐调味，滴几滴香油", "撒葱花出锅"],
+    protein: 4.8, carb: 3.2, fat: 2.1,
+  },
+  {
+    id: 5, name: "香菇炖豆腐", cal: 120, time: "20分钟", tag: "素食",
+    color: G.green, emoji: "🍄",
+    ingredients: ["豆腐 300g", "香菇 6朵", "生抽 1勺", "蚝油 半勺", "葱姜 适量"],
+    steps: ["豆腐切块，香菇泡发切片", "热锅煸炒葱姜，放入香菇翻炒", "加豆腐、生抽、蚝油和少量水", "中小火炖10分钟，收汁出锅"],
+    protein: 11.2, carb: 7.8, fat: 5.3,
+  },
+  {
+    id: 6, name: "胡萝卜炒肉丝", cal: 195, time: "15分钟", tag: "均衡",
+    color: G.amber, emoji: "🥕",
+    ingredients: ["猪里脊 150g", "胡萝卜 1根", "生抽 1勺", "淀粉 半勺", "盐 适量"],
+    steps: ["里脊切丝，加生抽、淀粉腌制10分钟", "胡萝卜切丝备用", "热锅炒肉丝至变色盛出", "同锅炒胡萝卜，加肉丝翻炒，调味出锅"],
+    protein: 18.6, carb: 9.4, fat: 7.8,
+  },
+];
+
+const FOOD_DB = [
+  { name: "米饭(100g)", cal: 116, protein: 2.6, carb: 25.6, fat: 0.3 },
+  { name: "鸡胸肉(100g)", cal: 133, protein: 24.6, carb: 0, fat: 3.2 },
+  { name: "苹果(1个)", cal: 52, protein: 0.3, carb: 14, fat: 0.2 },
+  { name: "牛奶(250ml)", cal: 163, protein: 8, carb: 12, fat: 8.5 },
+  { name: "燕麦(50g)", cal: 189, protein: 6.5, carb: 33, fat: 3.5 },
+  { name: "西兰花(100g)", cal: 34, protein: 2.8, carb: 6.6, fat: 0.4 },
+  { name: "鸡蛋(1个)", cal: 72, protein: 6.3, carb: 0.6, fat: 4.8 },
+  { name: "豆腐(100g)", cal: 76, protein: 8.1, carb: 1.9, fat: 4.2 },
+];
+
+const EXERCISES = [
+  { name: "晨跑", icon: "🏃", dur: 30, cal: 280, done: true },
+  { name: "瑜伽", icon: "🧘", dur: 45, cal: 180, done: false },
+  { name: "力量训练", icon: "🏋️", dur: 40, cal: 320, done: false },
+  { name: "骑行", icon: "🚴", dur: 60, cal: 400, done: false },
+];
+
+const WEIGHTS = [
+  { day: "4/7", w: 72.5 }, { day: "4/8", w: 72.3 }, { day: "4/9", w: 72.1 },
+  { day: "4/10", w: 71.9 }, { day: "4/11", w: 72.0 }, { day: "4/12", w: 71.7 }, { day: "4/13", w: 71.5 },
+];
+
+function MiniBar({ val, max, color }) {
+  return (
+    <div style={{ height: 6, background: "#E0E0E0", borderRadius: 3, overflow: "hidden", flex: 1 }}>
+      <div style={{ height: "100%", width: `${Math.min(100, (val / max) * 100)}%`, background: color, borderRadius: 3, transition: "width 0.5s" }} />
+    </div>
+  );
+}
+
+function WeightChart({ data }) {
+  const min = Math.min(...data.map(d => d.w)) - 0.5;
+  const max = Math.max(...data.map(d => d.w)) + 0.5;
+  const W = 300, H = 110, pad = { l: 36, r: 12, t: 10, b: 28 };
+  const x = i => pad.l + i * ((W - pad.l - pad.r) / (data.length - 1));
+  const y = v => pad.t + (1 - (v - min) / (max - min)) * (H - pad.t - pad.b);
+  const pts = data.map((d, i) => `${x(i)},${y(d.w)}`).join(" ");
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: H }}>
+      <polyline points={pts} fill="none" stroke={G.teal.mid} strokeWidth={2} strokeLinejoin="round" />
+      {data.map((d, i) => (
+        <g key={i}>
+          <circle cx={x(i)} cy={y(d.w)} r={3.5} fill={G.teal.mid} />
+          <text x={x(i)} y={H - 8} textAnchor="middle" fontSize={10} fill={G.gray.mid}>{d.day}</text>
+          {i === data.length - 1 && (
+            <text x={x(i) + 4} y={y(d.w) - 8} fontSize={10} fill={G.teal.dark} fontWeight="500">{d.w}</text>
+          )}
+        </g>
+      ))}
+      {[min + 0.5, min + 1, min + 1.5].map((v, i) => (
+        <text key={i} x={pad.l - 4} y={y(v) + 4} textAnchor="end" fontSize={9} fill={G.gray.mid}>{v.toFixed(1)}</text>
+      ))}
+    </svg>
+  );
+}
+
+function RecipeCard({ r, onClick }) {
+  return (
+    <div onClick={() => onClick(r)} style={{ background: r.color.bg, borderRadius: 12, padding: "14px 14px", cursor: "pointer", display: "flex", alignItems: "center", gap: 12, border: `1px solid ${r.color.light}` }}>
+      <div style={{ fontSize: 28, lineHeight: 1 }}>{r.emoji}</div>
+      <div style={{ flex: 1 }}>
+        <div style={{ fontWeight: 500, fontSize: 15, color: r.color.dark }}>{r.name}</div>
+        <div style={{ fontSize: 12, color: r.color.mid, marginTop: 2 }}>{r.time} · {r.cal} 千卡</div>
+      </div>
+      <span style={{ background: r.color.light, color: r.color.dark, fontSize: 11, padding: "2px 8px", borderRadius: 20, fontWeight: 500 }}>{r.tag}</span>
+    </div>
+  );
+}
+
+function RecipeDetail({ r, onBack }) {
+  return (
+    <div>
+      <button onClick={onBack} style={{ background: "none", border: "none", color: G.teal.mid, fontWeight: 500, fontSize: 14, cursor: "pointer", padding: "0 0 12px 0", display: "flex", alignItems: "center", gap: 4 }}>← 返回食谱</button>
+      <div style={{ background: r.color.bg, borderRadius: 16, padding: 16, marginBottom: 14 }}>
+        <div style={{ fontSize: 40, textAlign: "center", marginBottom: 8 }}>{r.emoji}</div>
+        <div style={{ fontWeight: 500, fontSize: 18, color: r.color.dark, textAlign: "center" }}>{r.name}</div>
+        <div style={{ display: "flex", justifyContent: "center", gap: 16, marginTop: 8 }}>
+          {[["热量", `${r.cal}千卡`], ["蛋白质", `${r.protein}g`], ["碳水", `${r.carb}g`], ["脂肪", `${r.fat}g`]].map(([k, v]) => (
+            <div key={k} style={{ textAlign: "center" }}>
+              <div style={{ fontSize: 13, fontWeight: 500, color: r.color.dark }}>{v}</div>
+              <div style={{ fontSize: 11, color: r.color.mid }}>{k}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div style={{ marginBottom: 14 }}>
+        <div style={{ fontWeight: 500, fontSize: 14, color: G.gray.dark, marginBottom: 8 }}>食材清单</div>
+        {r.ingredients.map((ing, i) => (
+          <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderBottom: `0.5px solid ${G.gray.light}` }}>
+            <div style={{ width: 6, height: 6, borderRadius: 3, background: r.color.mid }} />
+            <span style={{ fontSize: 14 }}>{ing}</span>
+          </div>
+        ))}
+      </div>
+      <div>
+        <div style={{ fontWeight: 500, fontSize: 14, color: G.gray.dark, marginBottom: 8 }}>烹饪步骤</div>
+        {r.steps.map((step, i) => (
+          <div key={i} style={{ display: "flex", gap: 10, marginBottom: 10 }}>
+            <div style={{ width: 22, height: 22, borderRadius: 11, background: r.color.mid, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 500, flexShrink: 0 }}>{i + 1}</div>
+            <div style={{ fontSize: 14, lineHeight: 1.6, paddingTop: 2 }}>{step}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export default function App() {
+  const [tab, setTab] = useState("home");
+  const [dietSub, setDietSub] = useState("record");
+  const [selectedRecipe, setSelectedRecipe] = useState(null);
+  const [foodLog, setFoodLog] = useState([
+    { name: "燕麦(50g)", cal: 189, meal: "早餐" },
+    { name: "鸡蛋(1个)", cal: 72, meal: "早餐" },
+    { name: "米饭(100g)", cal: 116, meal: "午餐" },
+  ]);
+  const [weights, setWeights] = useState(WEIGHTS);
+  const [newW, setNewW] = useState("");
+  const [exercises, setExercises] = useState(EXERCISES);
+  const [aiMsg, setAiMsg] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiHistory, setAiHistory] = useState([
+    { role: "ai", text: "你好！我是你的AI健康助手 🌿 可以问我饮食、运动、体重管理等任何健康问题！" }
+  ]);
+  const [search, setSearch] = useState("");
+  const [recipeSearch, setRecipeSearch] = useState("");
+
+  const totalCal = foodLog.reduce((s, f) => s + f.cal, 0);
+  const goal = 1800;
+  const exDone = exercises.filter(e => e.done).length;
+  const exCal = exercises.filter(e => e.done).reduce((s, e) => s + e.cal, 0);
+  const curW = weights[weights.length - 1].w;
+
+  const filteredFood = FOOD_DB.filter(f => f.name.includes(search));
+  const filteredRecipes = RECIPES.filter(r => r.name.includes(recipeSearch) || r.tag.includes(recipeSearch));
+
+  async function sendAI() {
+    if (!aiMsg.trim()) return;
+    const userMsg = aiMsg.trim();
+    setAiMsg("");
+    const newHistory = [...aiHistory, { role: "user", text: userMsg }];
+    setAiHistory(newHistory);
+    setAiLoading(true);
+    try {
+      const context = `用户今日饮食记录: ${foodLog.map(f => f.name).join("、")}，总热量${totalCal}千卡（目标${goal}千卡）。体重: ${curW}kg。已完成运动: ${exercises.filter(e => e.done).map(e => e.name).join("、") || "暂无"}。请用简洁友好的中文给出健康建议，控制在150字以内。`;
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 1000,
+          system: `你是一个专业的中文健康顾问，专注于饮食管理、体重控制和健康运动。${context}`,
+          messages: [
+            ...newHistory.filter(m => m.role !== "ai").map(m => ({ role: "user", content: m.text })),
+            { role: "user", content: userMsg }
+          ],
+        }),
+      });
+      const data = await res.json();
+      const reply = data.content?.[0]?.text || "抱歉，请稍后再试";
+      setAiHistory([...newHistory, { role: "ai", text: reply }]);
+    } catch {
+      setAiHistory([...newHistory, { role: "ai", text: "网络异常，请稍后再试 🙏" }]);
+    }
+    setAiLoading(false);
+  }
+
+  const tabs = [
+    { id: "home", icon: "🏠", label: "首页" },
+    { id: "diet", icon: "🥗", label: "饮食" },
+    { id: "weight", icon: "⚖️", label: "体重" },
+    { id: "exercise", icon: "🏃", label: "运动" },
+    { id: "ai", icon: "🤖", label: "AI助手" },
+  ];
+
+  return (
+    <div style={{ maxWidth: 420, margin: "0 auto", fontFamily: "sans-serif", paddingBottom: 70 }}>
+      <div style={{ background: G.green.mid, padding: "18px 20px 14px", borderRadius: "0 0 20px 20px" }}>
+        <div style={{ color: "#fff", fontSize: 11, opacity: 0.85 }}>2026年4月14日</div>
+        <div style={{ color: "#fff", fontWeight: 500, fontSize: 20, marginTop: 2 }}>HealthFlow 🌿</div>
+      </div>
+
+      <div style={{ padding: "16px 16px 0" }}>
+
+        {tab === "home" && (
+          <div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
+              {[
+                { label: "今日热量", val: `${totalCal} / ${goal}`, sub: "千卡", color: G.amber },
+                { label: "当前体重", val: `${curW}`, sub: "kg", color: G.teal },
+                { label: "已燃脂", val: `${exCal}`, sub: "千卡", color: G.green },
+                { label: "运动打卡", val: `${exDone} / ${exercises.length}`, sub: "项", color: G.blue },
+              ].map(c => (
+                <div key={c.label} style={{ background: c.color.bg, borderRadius: 12, padding: "14px 14px", border: `1px solid ${c.color.light}` }}>
+                  <div style={{ fontSize: 11, color: c.color.mid, marginBottom: 4 }}>{c.label}</div>
+                  <div style={{ fontWeight: 500, fontSize: 22, color: c.color.dark }}>{c.val}</div>
+                  <div style={{ fontSize: 11, color: c.color.mid }}>{c.sub}</div>
+                </div>
+              ))}
+            </div>
+            <div style={{ background: G.green.bg, borderRadius: 12, padding: "14px 16px", border: `1px solid ${G.green.light}` }}>
+              <div style={{ fontSize: 13, fontWeight: 500, color: G.green.dark, marginBottom: 10 }}>今日热量进度</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <MiniBar val={totalCal} max={goal} color={G.green.mid} />
+                <span style={{ fontSize: 12, color: G.green.mid, whiteSpace: "nowrap" }}>{Math.round(totalCal / goal * 100)}%</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8, fontSize: 12, color: G.green.mid }}>
+                <span>已摄入 {totalCal} 千卡</span>
+                <span>还剩 {Math.max(0, goal - totalCal)} 千卡</span>
+              </div>
+            </div>
+            <div style={{ marginTop: 14 }}>
+              <div style={{ fontSize: 13, fontWeight: 500, color: G.gray.dark, marginBottom: 8 }}>快捷入口</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+                {[["🥗", "记录饮食", "diet", "record"], ["🍽️", "健康食谱", "diet", "recipes"], ["⚖️", "记录体重", "weight", ""]].map(([icon, label, t, sub]) => (
+                  <button key={label} onClick={() => { setTab(t); if (sub) setDietSub(sub); }} style={{ background: "#fff", border: `0.5px solid ${G.green.light}`, borderRadius: 10, padding: "12px 4px", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+                    <span style={{ fontSize: 20 }}>{icon}</span>
+                    <span style={{ fontSize: 11, color: G.green.dark }}>{label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {tab === "diet" && (
+          <div>
+            <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+              {[["record", "饮食记录"], ["recipes", "健康食谱"]].map(([id, label]) => (
+                <button key={id} onClick={() => { setDietSub(id); setSelectedRecipe(null); }} style={{ flex: 1, padding: "8px 0", borderRadius: 20, border: "none", cursor: "pointer", fontWeight: 500, fontSize: 13, background: dietSub === id ? G.green.mid : G.green.bg, color: dietSub === id ? "#fff" : G.green.dark }}>
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {dietSub === "record" && (
+              <div>
+                <div style={{ background: G.amber.bg, borderRadius: 12, padding: "12px 14px", marginBottom: 14, border: `1px solid ${G.amber.light}` }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ fontSize: 13, color: G.amber.dark }}>今日摄入</span>
+                    <span style={{ fontWeight: 500, fontSize: 18, color: G.amber.dark }}>{totalCal} <span style={{ fontSize: 12 }}>/ {goal} 千卡</span></span>
+                  </div>
+                  <MiniBar val={totalCal} max={goal} color={G.amber.mid} />
+                </div>
+                <div style={{ marginBottom: 12 }}>
+                  <input value={search} onChange={e => setSearch(e.target.value)} placeholder="搜索食物..." style={{ width: "100%", padding: "8px 12px", borderRadius: 20, border: `0.5px solid ${G.green.light}`, fontSize: 13, boxSizing: "border-box", outline: "none" }} />
+                </div>
+                {search && (
+                  <div style={{ marginBottom: 14 }}>
+                    {filteredFood.map(f => (
+                      <div key={f.name} onClick={() => { setFoodLog([...foodLog, { name: f.name, cal: f.cal, meal: "加餐" }]); setSearch(""); }} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: `0.5px solid ${G.gray.light}`, cursor: "pointer" }}>
+                        <span style={{ fontSize: 14 }}>{f.name}</span>
+                        <span style={{ fontSize: 13, color: G.amber.mid }}>+{f.cal} 千卡</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 500, color: G.gray.dark, marginBottom: 8 }}>今日记录</div>
+                  {["早餐", "午餐", "加餐"].map(meal => {
+                    const items = foodLog.filter(f => f.meal === meal);
+                    if (!items.length) return null;
+                    return (
+                      <div key={meal} style={{ marginBottom: 12 }}>
+                        <div style={{ fontSize: 12, color: G.green.mid, marginBottom: 4 }}>{meal}</div>
+                        {items.map((f, i) => (
+                          <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: `0.5px solid ${G.gray.bg}` }}>
+                            <span style={{ fontSize: 14 }}>{f.name}</span>
+                            <span style={{ fontSize: 13, color: G.amber.mid }}>{f.cal} 千卡</span>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {dietSub === "recipes" && !selectedRecipe && (
+              <div>
+                <div style={{ fontSize: 13, color: G.gray.mid, marginBottom: 10 }}>🍜 中餐健康家常系列 · 第一版</div>
+                <div style={{ marginBottom: 12 }}>
+                  <input value={recipeSearch} onChange={e => setRecipeSearch(e.target.value)} placeholder="搜索食谱或标签..." style={{ width: "100%", padding: "8px 12px", borderRadius: 20, border: `0.5px solid ${G.green.light}`, fontSize: 13, boxSizing: "border-box", outline: "none" }} />
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {filteredRecipes.map(r => <RecipeCard key={r.id} r={r} onClick={setSelectedRecipe} />)}
+                </div>
+              </div>
+            )}
+
+            {dietSub === "recipes" && selectedRecipe && (
+              <RecipeDetail r={selectedRecipe} onBack={() => setSelectedRecipe(null)} />
+            )}
+          </div>
+        )}
+
+        {tab === "weight" && (
+          <div>
+            <div style={{ background: G.teal.bg, borderRadius: 12, padding: "14px 16px", marginBottom: 14, border: `1px solid ${G.teal.light}` }}>
+              <div style={{ fontSize: 13, color: G.teal.mid, marginBottom: 4 }}>当前体重</div>
+              <div style={{ fontWeight: 500, fontSize: 32, color: G.teal.dark }}>{curW} <span style={{ fontSize: 16 }}>kg</span></div>
+              <div style={{ fontSize: 12, color: G.teal.mid }}>目标体重 70.0 kg · 还差 {(curW - 70).toFixed(1)} kg</div>
+            </div>
+            <div style={{ background: "#fff", borderRadius: 12, padding: "12px 14px", marginBottom: 14, border: `0.5px solid ${G.teal.light}` }}>
+              <div style={{ fontSize: 13, fontWeight: 500, color: G.gray.dark, marginBottom: 8 }}>近7天趋势</div>
+              <WeightChart data={weights} />
+            </div>
+            <div style={{ background: G.green.bg, borderRadius: 12, padding: "14px 16px", border: `1px solid ${G.green.light}` }}>
+              <div style={{ fontSize: 13, fontWeight: 500, color: G.green.dark, marginBottom: 10 }}>记录今日体重</div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <input type="number" value={newW} onChange={e => setNewW(e.target.value)} placeholder="输入体重 (kg)" style={{ flex: 1, padding: "8px 12px", borderRadius: 20, border: `0.5px solid ${G.green.light}`, fontSize: 14, outline: "none" }} />
+                <button onClick={() => { if (newW) { setWeights([...weights, { day: "今天", w: parseFloat(newW) }]); setNewW(""); } }} style={{ background: G.green.mid, color: "#fff", border: "none", borderRadius: 20, padding: "8px 16px", cursor: "pointer", fontSize: 13, fontWeight: 500 }}>记录</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {tab === "exercise" && (
+          <div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
+              <div style={{ background: G.green.bg, borderRadius: 12, padding: "12px 14px", border: `1px solid ${G.green.light}` }}>
+                <div style={{ fontSize: 11, color: G.green.mid }}>已完成</div>
+                <div style={{ fontWeight: 500, fontSize: 22, color: G.green.dark }}>{exDone}<span style={{ fontSize: 13 }}>/{exercises.length}</span></div>
+              </div>
+              <div style={{ background: G.amber.bg, borderRadius: 12, padding: "12px 14px", border: `1px solid ${G.amber.light}` }}>
+                <div style={{ fontSize: 11, color: G.amber.mid }}>消耗热量</div>
+                <div style={{ fontWeight: 500, fontSize: 22, color: G.amber.dark }}>{exCal}<span style={{ fontSize: 13 }}>千卡</span></div>
+              </div>
+            </div>
+            <div style={{ fontSize: 13, fontWeight: 500, color: G.gray.dark, marginBottom: 10 }}>今日运动计划</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {exercises.map((ex, i) => (
+                <div key={i} onClick={() => setExercises(exercises.map((e, j) => j === i ? { ...e, done: !e.done } : e))} style={{ display: "flex", alignItems: "center", gap: 12, background: ex.done ? G.green.bg : "#fff", borderRadius: 12, padding: "14px 14px", cursor: "pointer", border: `1px solid ${ex.done ? G.green.light : G.gray.light}` }}>
+                  <div style={{ fontSize: 24 }}>{ex.icon}</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 500, fontSize: 14, color: ex.done ? G.green.dark : "#333" }}>{ex.name}</div>
+                    <div style={{ fontSize: 12, color: G.gray.mid }}>{ex.dur}分钟 · 约{ex.cal}千卡</div>
+                  </div>
+                  <div style={{ width: 22, height: 22, borderRadius: 11, border: `2px solid ${ex.done ? G.green.mid : G.gray.light}`, background: ex.done ? G.green.mid : "transparent", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, color: "#fff" }}>
+                    {ex.done ? "✓" : ""}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {tab === "ai" && (
+          <div>
+            <div style={{ fontSize: 12, color: G.gray.mid, marginBottom: 12, textAlign: "center" }}>基于你的饮食、体重和运动数据提供个性化建议</div>
+            <div style={{ minHeight: 320, maxHeight: 420, overflowY: "auto", display: "flex", flexDirection: "column", gap: 10, marginBottom: 12, padding: "4px 0" }}>
+              {aiHistory.map((m, i) => (
+                <div key={i} style={{ display: "flex", justifyContent: m.role === "user" ? "flex-end" : "flex-start" }}>
+                  <div style={{ maxWidth: "80%", background: m.role === "user" ? G.green.mid : G.green.bg, color: m.role === "user" ? "#fff" : G.green.dark, borderRadius: m.role === "user" ? "16px 16px 4px 16px" : "16px 16px 16px 4px", padding: "10px 14px", fontSize: 14, lineHeight: 1.6, border: m.role === "ai" ? `1px solid ${G.green.light}` : "none" }}>
+                    {m.text}
+                  </div>
+                </div>
+              ))}
+              {aiLoading && (
+                <div style={{ display: "flex", justifyContent: "flex-start" }}>
+                  <div style={{ background: G.green.bg, borderRadius: "16px 16px 16px 4px", padding: "10px 14px", fontSize: 14, color: G.green.mid, border: `1px solid ${G.green.light}` }}>思考中...</div>
+                </div>
+              )}
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <input value={aiMsg} onChange={e => setAiMsg(e.target.value)} onKeyDown={e => e.key === "Enter" && sendAI()} placeholder="问我任何健康问题..." style={{ flex: 1, padding: "10px 14px", borderRadius: 22, border: `0.5px solid ${G.green.light}`, fontSize: 14, outline: "none" }} />
+              <button onClick={sendAI} style={{ background: G.green.mid, color: "#fff", border: "none", borderRadius: 22, padding: "0 18px", cursor: "pointer", fontSize: 14, fontWeight: 500 }}>发送</button>
+            </div>
+            <div style={{ display: "flex", gap: 6, marginTop: 8, flexWrap: "wrap" }}>
+              {["今天吃什么好？", "如何加快减脂？", "运动后怎么补充营养？"].map(q => (
+                <button key={q} onClick={() => setAiMsg(q)} style={{ background: G.green.bg, color: G.green.dark, border: `0.5px solid ${G.green.light}`, borderRadius: 16, padding: "4px 10px", fontSize: 11, cursor: "pointer" }}>{q}</button>
+              ))}
+            </div>
+          </div>
+        )}
+
+      </div>
+
+      <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 420, background: "#fff", borderTop: `0.5px solid ${G.gray.light}`, display: "flex", zIndex: 100 }}>
+        {tabs.map(t => (
+          <button key={t.id} onClick={() => setTab(t.id)} style={{ flex: 1, padding: "10px 0 8px", border: "none", background: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+            <span style={{ fontSize: 18 }}>{t.icon}</span>
+            <span style={{ fontSize: 10, color: tab === t.id ? G.green.mid : G.gray.mid, fontWeight: tab === t.id ? 500 : 400 }}>{t.label}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
