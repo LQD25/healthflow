@@ -120,7 +120,67 @@ function RecipeDetail({ r, onBack }) {
   );
 }
 
+// 登录/注册界面
+function AuthScreen({ onAuth }) {
+  const [mode, setMode] = useState("login");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState("");
+
+  async function handleSubmit() {
+    if (!email || !password) { setMsg("请填写邮箱和密码"); return; }
+    setLoading(true);
+    setMsg("");
+    if (mode === "login") {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) setMsg("登录失败：" + (error.message === "Invalid login credentials" ? "邮箱或密码错误" : error.message));
+    } else {
+      const { error } = await supabase.auth.signUp({ email, password });
+      if (error) setMsg("注册失败：" + error.message);
+      else setMsg("注册成功！请检查邮箱验证后登录 📧");
+    }
+    setLoading(false);
+  }
+
+  return (
+    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24, background: G.green.bg }}>
+      <div style={{ fontSize: 48, marginBottom: 8 }}>🌿</div>
+      <div style={{ fontWeight: 500, fontSize: 24, color: G.green.dark, marginBottom: 4 }}>HealthFlow</div>
+      <div style={{ fontSize: 13, color: G.green.mid, marginBottom: 32 }}>你的健康管理助手</div>
+
+      <div style={{ width: "100%", maxWidth: 360, background: "#fff", borderRadius: 20, padding: 24, border: `1px solid ${G.green.light}` }}>
+        <div style={{ display: "flex", marginBottom: 20, background: G.green.bg, borderRadius: 12, padding: 4 }}>
+          {[["login", "登录"], ["signup", "注册"]].map(([id, label]) => (
+            <button key={id} onClick={() => { setMode(id); setMsg(""); }} style={{ flex: 1, padding: "8px 0", borderRadius: 10, border: "none", cursor: "pointer", fontWeight: 500, fontSize: 14, background: mode === id ? G.green.mid : "transparent", color: mode === id ? "#fff" : G.green.dark }}>
+              {label}
+            </button>
+          ))}
+        </div>
+
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ fontSize: 12, color: G.gray.mid, marginBottom: 4 }}>邮箱</div>
+          <input value={email} onChange={e => setEmail(e.target.value)} placeholder="输入邮箱" type="email" style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `0.5px solid ${G.green.light}`, fontSize: 14, boxSizing: "border-box", outline: "none" }} />
+        </div>
+
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ fontSize: 12, color: G.gray.mid, marginBottom: 4 }}>密码</div>
+          <input value={password} onChange={e => setPassword(e.target.value)} placeholder="输入密码（至少6位）" type="password" style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: `0.5px solid ${G.green.light}`, fontSize: 14, boxSizing: "border-box", outline: "none" }} onKeyDown={e => e.key === "Enter" && handleSubmit()} />
+        </div>
+
+        {msg && <div style={{ fontSize: 13, color: msg.includes("成功") ? G.green.mid : "#E24B4A", marginBottom: 12, textAlign: "center" }}>{msg}</div>}
+
+        <button onClick={handleSubmit} disabled={loading} style={{ width: "100%", padding: "12px 0", borderRadius: 12, border: "none", background: G.green.mid, color: "#fff", fontWeight: 500, fontSize: 15, cursor: "pointer", opacity: loading ? 0.7 : 1 }}>
+          {loading ? "处理中..." : mode === "login" ? "登录" : "注册"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
+  const [user, setUser] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const [tab, setTab] = useState("home");
   const [dietSub, setDietSub] = useState("record");
   const [selectedRecipe, setSelectedRecipe] = useState(null);
@@ -137,22 +197,36 @@ export default function App() {
   const [search, setSearch] = useState("");
   const [recipeSearch, setRecipeSearch] = useState("");
 
-  useEffect(() => { loadAll(); }, []);
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      setAuthLoading(false);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (user) loadAll();
+  }, [user]);
 
   async function loadAll() {
     setLoading(true);
     const today = new Date().toISOString().split('T')[0];
+    const uid = user.id;
     const [f, w, e] = await Promise.all([
-      supabase.from('food_logs').select('*').eq('created_at', today).order('id'),
-      supabase.from('weight_logs').select('*').order('created_at'),
-      supabase.from('exercise_logs').select('*').eq('created_at', today).order('id'),
+      supabase.from('food_logs').select('*').eq('user_id', uid).eq('created_at', today).order('id'),
+      supabase.from('weight_logs').select('*').eq('user_id', uid).order('created_at'),
+      supabase.from('exercise_logs').select('*').eq('user_id', uid).eq('created_at', today).order('id'),
     ]);
     if (f.data) setFoodLog(f.data);
     if (w.data) setWeights(w.data);
     if (e.data && e.data.length) {
       setExercises(e.data);
     } else {
-      const def = DEFAULT_EXERCISES.map(ex => ({ ...ex, created_at: today }));
+      const def = DEFAULT_EXERCISES.map(ex => ({ ...ex, user_id: uid, created_at: today }));
       const { data } = await supabase.from('exercise_logs').insert(def).select();
       if (data) setExercises(data);
     }
@@ -160,7 +234,7 @@ export default function App() {
   }
 
   async function addFood(f) {
-    const { data } = await supabase.from('food_logs').insert([{ name: f.name, cal: f.cal, meal: '加餐' }]).select();
+    const { data } = await supabase.from('food_logs').insert([{ name: f.name, cal: f.cal, meal: '加餐', user_id: user.id }]).select();
     if (data) setFoodLog(prev => [...prev, ...data]);
     setSearch("");
   }
@@ -168,7 +242,7 @@ export default function App() {
   async function addWeight() {
     if (!newW) return;
     const day = `${new Date().getMonth() + 1}/${new Date().getDate()}`;
-    const { data } = await supabase.from('weight_logs').insert([{ weight: parseFloat(newW), day }]).select();
+    const { data } = await supabase.from('weight_logs').insert([{ weight: parseFloat(newW), day, user_id: user.id }]).select();
     if (data) setWeights(prev => [...prev, ...data]);
     setNewW("");
   }
@@ -177,6 +251,11 @@ export default function App() {
     const updated = !ex.done;
     await supabase.from('exercise_logs').update({ done: updated }).eq('id', ex.id);
     setExercises(prev => prev.map((e, j) => j === i ? { ...e, done: updated } : e));
+  }
+
+  async function signOut() {
+    await supabase.auth.signOut();
+    setFoodLog([]); setWeights([]); setExercises([]);
   }
 
   async function sendAI() {
@@ -225,18 +304,33 @@ export default function App() {
     { id: "ai", icon: "🤖", label: "AI助手" },
   ];
 
+  if (authLoading) return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100vh", gap: 12 }}>
+      <div style={{ fontSize: 40 }}>🌿</div>
+      <div style={{ color: G.green.mid, fontSize: 14 }}>HealthFlow 启动中...</div>
+    </div>
+  );
+
+  if (!user) return <AuthScreen />;
+
   if (loading) return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100vh", gap: 12 }}>
       <div style={{ fontSize: 40 }}>🌿</div>
-      <div style={{ color: G.green.mid, fontSize: 14 }}>HealthFlow 加载中...</div>
+      <div style={{ color: G.green.mid, fontSize: 14 }}>加载数据中...</div>
     </div>
   );
 
   return (
     <div style={{ maxWidth: 420, margin: "0 auto", fontFamily: "sans-serif", paddingBottom: 70 }}>
       <div style={{ background: G.green.mid, padding: "18px 20px 14px", borderRadius: "0 0 20px 20px" }}>
-        <div style={{ color: "#fff", fontSize: 11, opacity: 0.85 }}>{new Date().toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
-        <div style={{ color: "#fff", fontWeight: 500, fontSize: 20, marginTop: 2 }}>HealthFlow 🌿</div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div>
+            <div style={{ color: "#fff", fontSize: 11, opacity: 0.85 }}>{new Date().toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
+            <div style={{ color: "#fff", fontWeight: 500, fontSize: 20, marginTop: 2 }}>HealthFlow 🌿</div>
+          </div>
+          <button onClick={signOut} style={{ background: "rgba(255,255,255,0.2)", border: "none", borderRadius: 20, padding: "6px 12px", color: "#fff", fontSize: 12, cursor: "pointer" }}>退出</button>
+        </div>
+        <div style={{ color: "#fff", fontSize: 11, opacity: 0.7, marginTop: 4 }}>{user.email}</div>
       </div>
 
       <div style={{ padding: "16px 16px 0" }}>
@@ -291,7 +385,6 @@ export default function App() {
                 </button>
               ))}
             </div>
-
             {dietSub === "record" && (
               <div>
                 <div style={{ background: G.amber.bg, borderRadius: 12, padding: "12px 14px", marginBottom: 14, border: `1px solid ${G.amber.light}` }}>
@@ -326,7 +419,6 @@ export default function App() {
                 </div>
               </div>
             )}
-
             {dietSub === "recipes" && !selectedRecipe && (
               <div>
                 <div style={{ fontSize: 13, color: G.gray.mid, marginBottom: 10 }}>🍜 中餐健康家常系列 · 第一版</div>
@@ -338,7 +430,6 @@ export default function App() {
                 </div>
               </div>
             )}
-
             {dietSub === "recipes" && selectedRecipe && (
               <RecipeDetail r={selectedRecipe} onBack={() => setSelectedRecipe(null)} />
             )}
