@@ -209,20 +209,22 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (user) loadAll();
-  }, [user]);
+  if (!user) return;
 
-  async function loadAll() {
+  const loadAll = async () => {
     setLoading(true);
     const today = new Date().toISOString().split('T')[0];
     const uid = user.id;
+
     const [f, w, e] = await Promise.all([
       supabase.from('food_logs').select('*').eq('user_id', uid).eq('created_at', today).order('id'),
       supabase.from('weight_logs').select('*').eq('user_id', uid).order('created_at'),
       supabase.from('exercise_logs').select('*').eq('user_id', uid).eq('created_at', today).order('id'),
     ]);
+
     if (f.data) setFoodLog(f.data);
     if (w.data) setWeights(w.data);
+
     if (e.data && e.data.length) {
       setExercises(e.data);
     } else {
@@ -230,8 +232,12 @@ export default function App() {
       const { data } = await supabase.from('exercise_logs').insert(def).select();
       if (data) setExercises(data);
     }
+
     setLoading(false);
-  }
+  };
+
+  loadAll();
+}, [user]);
 
   async function addFood(f) {
     const { data } = await supabase.from('food_logs').insert([{ name: f.name, cal: f.cal, meal: '加餐', user_id: user.id }]).select();
