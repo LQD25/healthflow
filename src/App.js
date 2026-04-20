@@ -188,6 +188,7 @@ export default function App() {
   const [weights, setWeights] = useState([]);
   const [exercises, setExercises] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [initialized, setInitialized] = useState(false);
   const [newW, setNewW] = useState("");
   const [aiMsg, setAiMsg] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
@@ -208,8 +209,8 @@ export default function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  useEffect(() => {
-  if (!user) return;
+useEffect(() => {
+  if (!user || initialized) return;
 
   const loadAll = async () => {
     setLoading(true);
@@ -228,16 +229,26 @@ export default function App() {
     if (e.data && e.data.length) {
       setExercises(e.data);
     } else {
-      const def = DEFAULT_EXERCISES.map(ex => ({ ...ex, user_id: uid, created_at: today }));
-      const { data } = await supabase.from('exercise_logs').insert(def).select();
+      const def = DEFAULT_EXERCISES.map(ex => ({
+        ...ex,
+        user_id: uid,
+        created_at: today
+      }));
+
+      const { data } = await supabase
+        .from('exercise_logs')
+        .insert(def)
+        .select();
+
       if (data) setExercises(data);
     }
 
+    setInitialized(true); // ✅ 防止重复执行
     setLoading(false);
   };
 
   loadAll();
-}, [user]);
+}, [user, initialized]);
 
   async function addFood(f) {
     const { data } = await supabase.from('food_logs').insert([{ name: f.name, cal: f.cal, meal: '加餐', user_id: user.id }]).select();
