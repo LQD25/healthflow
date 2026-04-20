@@ -7,6 +7,7 @@ const G = {
   amber: { bg: "#FAEEDA", mid: "#BA7517", dark: "#633806", light: "#FAC775" },
   blue: { bg: "#E6F1FB", mid: "#185FA5", dark: "#0C447C", light: "#B5D4F4" },
   gray: { bg: "#F1EFE8", mid: "#5F5E5A", dark: "#2C2C2A", light: "#D3D1C7" },
+  red: { bg: "#FCEBEB", mid: "#E24B4A", dark: "#501313", light: "#F7C1C1" },
 };
 
 const RECIPES = [
@@ -36,6 +37,19 @@ const DEFAULT_EXERCISES = [
   { name: "骑行", icon: "🚴", duration: 60, cal: 400, done: false },
 ];
 
+function bmiColor(bmi) {
+  if (bmi < 18.5) return G.blue;
+  if (bmi < 24) return G.green;
+  if (bmi < 28) return G.amber;
+  return G.red;
+}
+
+function bmiLabel(bmi) {
+  if (bmi < 18.5) return "偏瘦";
+  if (bmi < 24) return "正常";
+  if (bmi < 28) return "偏重";
+  return "肥胖";
+}
 function MiniBar({ val, max, color }) {
   return (
     <div style={{ height: 6, background: "#E0E0E0", borderRadius: 3, overflow: "hidden", flex: 1 }}>
@@ -177,7 +191,111 @@ function AuthScreen({ onAuth }) {
     </div>
   );
 }
+function ProfileTab({ user, onSignOut }) {
+  const [height, setHeight] = useState(localStorage.getItem("hf_height") || "");
+  const [weight, setWeight] = useState(localStorage.getItem("hf_weight") || "");
+  const [age, setAge] = useState(localStorage.getItem("hf_age") || "");
+  const [gender, setGender] = useState(localStorage.getItem("hf_gender") || "male");
+  const [goal, setGoal] = useState(localStorage.getItem("hf_goal") || "1800");
+  const [saved, setSaved] = useState(false);
 
+  const bmi = height && weight ? (parseFloat(weight) / Math.pow(parseFloat(height) / 100, 2)).toFixed(1) : null;
+  const bc = bmi ? bmiColor(parseFloat(bmi)) : G.gray;
+
+  function calcTDEE() {
+    if (!height || !weight || !age) return null;
+    const h = parseFloat(height), w = parseFloat(weight), a = parseFloat(age);
+    const bmr = gender === "male" ? 88.36 + 13.4 * w + 4.8 * h - 5.7 * a : 447.6 + 9.2 * w + 3.1 * h - 4.3 * a;
+    return Math.round(bmr * 1.55);
+  }
+
+  const tdee = calcTDEE();
+
+  function save() {
+    localStorage.setItem("hf_height", height);
+    localStorage.setItem("hf_weight", weight);
+    localStorage.setItem("hf_age", age);
+    localStorage.setItem("hf_gender", gender);
+    localStorage.setItem("hf_goal", goal);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  }
+
+  return (
+    <div>
+      <div style={{ background: G.green.bg, borderRadius: 12, padding: "14px 16px", marginBottom: 14, border: `1px solid ${G.green.light}` }}>
+        <div style={{ fontSize: 13, color: G.green.mid, marginBottom: 2 }}>当前账号</div>
+        <div style={{ fontWeight: 500, fontSize: 14, color: G.green.dark }}>{user.email}</div>
+        <button onClick={onSignOut} style={{ marginTop: 8, background: "none", border: `0.5px solid ${G.red.mid}`, borderRadius: 20, padding: "4px 14px", color: G.red.mid, fontSize: 12, cursor: "pointer" }}>退出登录</button>
+      </div>
+
+      <div style={{ background: "#fff", borderRadius: 12, padding: "14px 16px", marginBottom: 14, border: `0.5px solid ${G.gray.light}` }}>
+        <div style={{ fontSize: 13, fontWeight: 500, color: G.gray.dark, marginBottom: 12 }}>个人资料</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
+          {[["身高", height, setHeight, "cm"], ["体重", weight, setWeight, "kg"], ["年龄", age, setAge, "岁"]].map(([label, val, setter, unit]) => (
+            <div key={label}>
+              <div style={{ fontSize: 11, color: G.gray.mid, marginBottom: 4 }}>{label}（{unit}）</div>
+              <input type="number" value={val} onChange={e => setter(e.target.value)} placeholder={`输入${label}`} style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: `0.5px solid ${G.gray.light}`, fontSize: 14, boxSizing: "border-box", outline: "none" }} />
+            </div>
+          ))}
+          <div>
+            <div style={{ fontSize: 11, color: G.gray.mid, marginBottom: 4 }}>性别</div>
+            <div style={{ display: "flex", gap: 6 }}>
+              {[["male", "男"], ["female", "女"]].map(([val, label]) => (
+                <button key={val} onClick={() => setGender(val)} style={{ flex: 1, padding: "8px 0", borderRadius: 8, border: `0.5px solid ${gender === val ? G.green.mid : G.gray.light}`, background: gender === val ? G.green.bg : "#fff", color: gender === val ? G.green.dark : G.gray.mid, fontSize: 13, cursor: "pointer" }}>{label}</button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {bmi && (
+        <div style={{ background: bc.bg, borderRadius: 12, padding: "14px 16px", marginBottom: 14, border: `1px solid ${bc.light}` }}>
+          <div style={{ fontSize: 13, fontWeight: 500, color: bc.dark, marginBottom: 8 }}>BMI 指数</div>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
+            <div style={{ fontWeight: 500, fontSize: 36, color: bc.dark }}>{bmi}</div>
+            <div style={{ fontSize: 16, color: bc.mid }}>{bmiLabel(parseFloat(bmi))}</div>
+          </div>
+          <div style={{ marginTop: 8 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: bc.mid, marginBottom: 4 }}>
+              <span>偏瘦 &lt;18.5</span><span>正常 18.5-24</span><span>偏重 24-28</span><span>肥胖 &gt;28</span>
+            </div>
+            <div style={{ height: 8, background: `linear-gradient(to right, ${G.blue.mid}, ${G.green.mid}, ${G.amber.mid}, ${G.red.mid})`, borderRadius: 4, position: "relative" }}>
+              <div style={{ position: "absolute", top: -3, left: `${Math.min(95, Math.max(2, (parseFloat(bmi) - 15) / 20 * 100))}%`, width: 14, height: 14, borderRadius: 7, background: "#fff", border: `2px solid ${bc.mid}`, transform: "translateX(-50%)" }} />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {tdee && (
+        <div style={{ background: G.teal.bg, borderRadius: 12, padding: "14px 16px", marginBottom: 14, border: `1px solid ${G.teal.light}` }}>
+          <div style={{ fontSize: 13, fontWeight: 500, color: G.teal.dark, marginBottom: 4 }}>每日消耗估算（TDEE）</div>
+          <div style={{ fontWeight: 500, fontSize: 28, color: G.teal.dark }}>{tdee} <span style={{ fontSize: 14 }}>千卡/天</span></div>
+          <div style={{ fontSize: 12, color: G.teal.mid, marginTop: 4 }}>基于身高体重年龄，适度活动量估算</div>
+        </div>
+      )}
+
+      <div style={{ background: G.amber.bg, borderRadius: 12, padding: "14px 16px", marginBottom: 14, border: `1px solid ${G.amber.light}` }}>
+        <div style={{ fontSize: 13, fontWeight: 500, color: G.amber.dark, marginBottom: 8 }}>每日热量目标</div>
+        <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+          {tdee && [["减脂", Math.round(tdee * 0.8)], ["维持", tdee], ["增肌", Math.round(tdee * 1.15)]].map(([label, val]) => (
+            <button key={label} onClick={() => setGoal(String(val))} style={{ flex: 1, padding: "6px 0", borderRadius: 8, border: `0.5px solid ${String(val) === goal ? G.amber.mid : G.amber.light}`, background: String(val) === goal ? G.amber.mid : G.amber.bg, color: String(val) === goal ? "#fff" : G.amber.dark, fontSize: 12, cursor: "pointer" }}>
+              {label}<br /><span style={{ fontSize: 11 }}>{val}千卡</span>
+            </button>
+          ))}
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <input type="number" value={goal} onChange={e => setGoal(e.target.value)} style={{ flex: 1, padding: "8px 12px", borderRadius: 8, border: `0.5px solid ${G.amber.light}`, fontSize: 14, outline: "none" }} />
+          <span style={{ fontSize: 12, color: G.amber.mid }}>千卡/天</span>
+        </div>
+      </div>
+
+      <button onClick={save} style={{ width: "100%", padding: "12px 0", borderRadius: 12, border: "none", background: saved ? G.teal.mid : G.green.mid, color: "#fff", fontWeight: 500, fontSize: 15, cursor: "pointer" }}>
+        {saved ? "✓ 已保存" : "保存设置"}
+      </button>
+    </div>
+  );
+}
 export default function App() {
   const [user, setUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
@@ -319,6 +437,7 @@ useEffect(() => {
     { id: "weight", icon: "⚖️", label: "体重" },
     { id: "exercise", icon: "🏃", label: "运动" },
     { id: "ai", icon: "🤖", label: "AI助手" },
+    { id: "profile", icon: "👤", label: "我的" },
   ];
 
   if (authLoading) return (
@@ -532,14 +651,16 @@ useEffect(() => {
             </div>
           </div>
         )}
-
+        {tab === "profile" && (
+        <ProfileTab user={user} onSignOut={signOut} />
+       )}
       </div>
 
       <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 420, background: "#fff", borderTop: `0.5px solid ${G.gray.light}`, display: "flex", zIndex: 100 }}>
         {tabs.map(t => (
           <button key={t.id} onClick={() => setTab(t.id)} style={{ flex: 1, padding: "10px 0 8px", border: "none", background: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
-            <span style={{ fontSize: 18 }}>{t.icon}</span>
-            <span style={{ fontSize: 10, color: tab === t.id ? G.green.mid : G.gray.mid, fontWeight: tab === t.id ? 500 : 400 }}>{t.label}</span>
+            <span style={{ fontSize: 16 }}>{t.icon}</span>
+            <span style={{ fontSize: 9, color: tab === t.id ? G.green.mid : G.gray.mid, fontWeight: tab === t.id ? 500 : 400 }}>{t.label}</span>
           </button>
         ))}
       </div>
