@@ -37,6 +37,18 @@ const DEFAULT_EXERCISES = [
   { name: "骑行", icon: "🚴", duration: 60, cal: 400, done: false },
 ];
 
+
+const EXERCISE_PRESETS = [
+  { name: "散步", icon: "🚶", met: 3.5 },
+  { name: "慢跑", icon: "🏃", met: 7 },
+  { name: "游泳", icon: "🏊", met: 8 },
+  { name: "骑行", icon: "🚴", met: 6 },
+  { name: "力量训练", icon: "🏋️", met: 5 },
+  { name: "瑜伽", icon: "🧘", met: 3 },
+  { name: "跳绳", icon: "⚡", met: 10 },
+  { name: "自定义", icon: "✏️", met: null },
+];
+
 function bmiColor(bmi) {
   if (bmi < 18.5) return G.blue;
   if (bmi < 24) return G.green;
@@ -316,6 +328,8 @@ export default function App() {
   const [search, setSearch] = useState("");
   const [recipeSearch, setRecipeSearch] = useState("");
 
+  const [showAddEx, setShowAddEx] = useState(false);
+  const [newEx, setNewEx] = useState({ name: "", icon: "🏃", duration: 30, cal: 0, preset: null });
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
@@ -388,6 +402,33 @@ useEffect(() => {
     setExercises(prev => prev.map((e, j) => j === i ? { ...e, done: updated } : e));
   }
 
+function calcExCal(met, duration) {
+  const w = parseFloat(localStorage.getItem("hf_weight") || "65");
+  return Math.round(met * w * (duration / 60));
+}
+
+function handlePresetChange(preset) {
+  const dur = newEx.duration || 30;
+  const cal = preset.met ? calcExCal(preset.met, dur) : newEx.cal;
+  setNewEx({ ...newEx, name: preset.name === "自定义" ? "" : preset.name, icon: preset.icon, cal, preset });
+}
+
+function handleDurChange(dur) {
+  const cal = newEx.preset?.met ? calcExCal(newEx.preset.met, dur) : newEx.cal;
+  setNewEx({ ...newEx, duration: parseInt(dur), cal });
+}
+
+async function addExercise() {
+  if (!newEx.name || !newEx.duration || !newEx.cal) return;
+  const today = new Date().toISOString().split('T')[0];
+  const { data } = await supabase.from('exercise_logs').insert([{
+    name: newEx.name, icon: newEx.icon, duration: newEx.duration,
+    cal: newEx.cal, done: false, user_id: user.id, created_at: today
+  }]).select();
+  if (data) setExercises(prev => [...prev, ...data]);
+  setNewEx({ name: "", icon: "🏃", duration: 30, cal: 0, preset: null });
+  setShowAddEx(false);
+}
   async function signOut() {
     await supabase.auth.signOut();
     setFoodLog([]); setWeights([]); setExercises([]);
@@ -606,7 +647,7 @@ useEffect(() => {
               </div>
             </div>
             <div style={{ fontSize: 13, fontWeight: 500, color: G.gray.dark, marginBottom: 10 }}>今日运动计划</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {exercises.map((ex, i) => (
                 <div key={i} onClick={() => toggleExercise(ex, i)} style={{ display: "flex", alignItems: "center", gap: 12, background: ex.done ? G.green.bg : "#fff", borderRadius: 12, padding: "14px", cursor: "pointer", border: `1px solid ${ex.done ? G.green.light : G.gray.light}` }}>
                   <div style={{ fontSize: 24 }}>{ex.icon}</div>
@@ -620,6 +661,48 @@ useEffect(() => {
                 </div>
               ))}
             </div>
+
+            <div style={{ marginTop: 12 }}>
+              {!showAddEx ? (
+                <button onClick={() => setShowAddEx(true)} style={{ width: "100%", padding: "12px 0", borderRadius: 12, border: `1px dashed ${G.green.light}`, background: "transparent", color: G.green.mid, fontSize: 14, cursor: "pointer" }}>
+                  + 添加运动
+                </button>
+              ) : (
+                <div style={{ background: G.green.bg, borderRadius: 12, padding: 14, border: `1px solid ${G.green.light}` }}>
+                  <div style={{ fontSize: 13, fontWeight: 500, color: G.green.dark, marginBottom: 10 }}>添加运动</div>
+                  <div style={{ fontSize: 11, color: G.gray.mid, marginBottom: 6 }}>选择类型</div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6, marginBottom: 12 }}>
+                    {EXERCISE_PRESETS.map(p => (
+                      <button key={p.name} onClick={() => handlePresetChange(p)} style={{ padding: "6px 0", borderRadius: 8, border: `0.5px solid ${newEx.preset?.name === p.name ? G.green.mid : G.gray.light}`, background: newEx.preset?.name === p.name ? G.green.mid : "#fff", color: newEx.preset?.name === p.name ? "#fff" : G.gray.dark, fontSize: 11, cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+                        <span style={{ fontSize: 16 }}>{p.icon}</span>
+                        <span>{p.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                  {newEx.preset?.name === "自定义" && (
+                    <div style={{ marginBottom: 10 }}>
+                      <div style={{ fontSize: 11, color: G.gray.mid, marginBottom: 4 }}>运动名称</div>
+                      <input value={newEx.name} onChange={e => setNewEx({ ...newEx, name: e.target.value })} placeholder="输入运动名称" style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: `0.5px solid ${G.gray.light}`, fontSize: 13, boxSizing: "border-box", outline: "none" }} />
+                    </div>
+                  )}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
+                    <div>
+                      <div style={{ fontSize: 11, color: G.gray.mid, marginBottom: 4 }}>时长（分钟）</div>
+                      <input type="number" value={newEx.duration} onChange={e => handleDurChange(e.target.value)} style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: `0.5px solid ${G.gray.light}`, fontSize: 13, boxSizing: "border-box", outline: "none" }} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 11, color: G.gray.mid, marginBottom: 4 }}>消耗热量（千卡）</div>
+                      <input type="number" value={newEx.cal} onChange={e => setNewEx({ ...newEx, cal: parseInt(e.target.value) })} style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: `0.5px solid ${G.gray.light}`, fontSize: 13, boxSizing: "border-box", outline: "none" }} />
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button onClick={() => setShowAddEx(false)} style={{ flex: 1, padding: "10px 0", borderRadius: 10, border: `0.5px solid ${G.gray.light}`, background: "#fff", color: G.gray.mid, fontSize: 13, cursor: "pointer" }}>取消</button>
+                    <button onClick={addExercise} style={{ flex: 2, padding: "10px 0", borderRadius: 10, border: "none", background: G.green.mid, color: "#fff", fontSize: 13, fontWeight: 500, cursor: "pointer" }}>确认添加</button>
+                  </div>
+                </div>
+              )}
+            </div>
+            
           </div>
         )}
 
