@@ -10,14 +10,90 @@ const G = {
   red: { bg: "#FCEBEB", mid: "#E24B4A", dark: "#501313", light: "#F7C1C1" },
 };
 
-const RECIPES = [
-  { id: 1, name: "清炒西兰花", cal: 85, time: "15分钟", tag: "低卡", color: G.green, emoji: "🥦", ingredients: ["西兰花 300g", "大蒜 3瓣", "盐 适量", "橄榄油 1勺"], steps: ["西兰花洗净切小朵，焯水2分钟", "热锅倒油，爆香蒜末", "放入西兰花大火翻炒2分钟", "加盐调味出锅"], protein: 5.6, carb: 8.2, fat: 3.1 },
-  { id: 2, name: "番茄炒鸡蛋", cal: 168, time: "10分钟", tag: "家常", color: G.amber, emoji: "🍅", ingredients: ["鸡蛋 3个", "番茄 2个", "盐 适量", "糖 少许", "食用油 1勺"], steps: ["鸡蛋打散，番茄切块", "热锅炒鸡蛋至半熟盛出", "同锅炒番茄，出汁后加鸡蛋", "加盐、糖调味翻炒均匀"], protein: 13.2, carb: 10.5, fat: 8.4 },
-  { id: 3, name: "清蒸鲈鱼", cal: 142, time: "25分钟", tag: "高蛋白", color: G.teal, emoji: "🐟", ingredients: ["鲈鱼 1条(约500g)", "姜 5片", "葱 2根", "蒸鱼豉油 2勺", "热油 少许"], steps: ["鲈鱼洗净，背部划刀，塞入姜片", "蒸锅上汽后蒸8-10分钟", "倒掉蒸出的水，铺上葱丝", "淋上豉油，浇热油激香"], protein: 26.4, carb: 0.8, fat: 4.2 },
-  { id: 4, name: "紫菜蛋花汤", cal: 55, time: "8分钟", tag: "低卡", color: G.blue, emoji: "🍜", ingredients: ["紫菜 10g", "鸡蛋 1个", "盐 适量", "香油 几滴", "葱花 少许"], steps: ["锅中烧水，水开后放入紫菜", "鸡蛋打散，缓慢倒入锅中", "加盐调味，滴几滴香油", "撒葱花出锅"], protein: 4.8, carb: 3.2, fat: 2.1 },
-  { id: 5, name: "香菇炖豆腐", cal: 120, time: "20分钟", tag: "素食", color: G.green, emoji: "🍄", ingredients: ["豆腐 300g", "香菇 6朵", "生抽 1勺", "蚝油 半勺", "葱姜 适量"], steps: ["豆腐切块，香菇泡发切片", "热锅煸炒葱姜，放入香菇翻炒", "加豆腐、生抽、蚝油和少量水", "中小火炖10分钟，收汁出锅"], protein: 11.2, carb: 7.8, fat: 5.3 },
-  { id: 6, name: "胡萝卜炒肉丝", cal: 195, time: "15分钟", tag: "均衡", color: G.amber, emoji: "🥕", ingredients: ["猪里脊 150g", "胡萝卜 1根", "生抽 1勺", "淀粉 半勺", "盐 适量"], steps: ["里脊切丝，加生抽、淀粉腌制10分钟", "胡萝卜切丝备用", "热锅炒肉丝至变色盛出", "同锅炒胡萝卜，加肉丝翻炒，调味出锅"], protein: 18.6, carb: 9.4, fat: 7.8 },
+const STAPLES = [
+  { name: "白米饭", cal: 116, icon: "🍚" },
+  { name: "糙米饭", cal: 111, icon: "🍚" },
+  { name: "馒头", cal: 223, icon: "🫓" },
+  { name: "面条", cal: 137, icon: "🍜" },
+  { name: "花卷", cal: 211, icon: "🫓" },
+  { name: "杂粮饭", cal: 102, icon: "🍚" },
 ];
+
+const RECIPES = [
+  { id: 1, name: "宫保鸡丁", cal: 280, tag: "经典", emoji: "🍗", color: G.amber, time: "20分钟", ingredients: ["鸡胸肉 200g", "花生 30g", "干辣椒 5个", "葱姜蒜 适量", "生抽 1勺", "醋 1勺", "糖 半勺"], steps: ["鸡肉切丁腌制10分钟", "热锅爆香干辣椒葱姜蒜", "下鸡丁翻炒至变色", "加花生和调料翻炒均匀"], protein: 28, carb: 12, fat: 14 },
+  { id: 2, name: "麻婆豆腐", cal: 195, tag: "家常", emoji: "🫕", color: G.red, time: "15分钟", ingredients: ["豆腐 300g", "猪肉末 50g", "豆瓣酱 1勺", "花椒 适量", "葱姜蒜 适量"], steps: ["豆腐切块焯水", "炒香肉末和豆瓣酱", "加豆腐和水炖5分钟", "勾芡撒花椒粉出锅"], protein: 14, carb: 8, fat: 11 },
+  { id: 3, name: "红烧肉", cal: 395, tag: "硬菜", emoji: "🥩", color: G.amber, time: "60分钟", ingredients: ["五花肉 300g", "生抽 2勺", "老抽 1勺", "糖 1勺", "料酒 2勺", "葱姜 适量"], steps: ["五花肉切块焯水", "炒糖色放入肉块", "加调料和水大火烧开", "小火焖40分钟收汁"], protein: 18, carb: 6, fat: 32 },
+  { id: 4, name: "清蒸鲈鱼", cal: 142, tag: "高蛋白", emoji: "🐟", color: G.teal, time: "25分钟", ingredients: ["鲈鱼 500g", "姜 5片", "葱 2根", "蒸鱼豉油 2勺"], steps: ["鲈鱼划刀塞姜片", "蒸8-10分钟", "铺葱丝淋豉油", "浇热油激香"], protein: 26, carb: 1, fat: 4 },
+  { id: 5, name: "番茄炒鸡蛋", cal: 168, tag: "家常", emoji: "🍅", color: G.amber, time: "10分钟", ingredients: ["鸡蛋 3个", "番茄 2个", "盐 适量", "糖 少许"], steps: ["鸡蛋打散炒熟盛出", "炒番茄出汁", "加鸡蛋翻炒调味"], protein: 13, carb: 10, fat: 8 },
+  { id: 6, name: "蒜蓉西兰花", cal: 85, tag: "低卡", emoji: "🥦", color: G.green, time: "15分钟", ingredients: ["西兰花 300g", "大蒜 5瓣", "盐 适量", "橄榄油 1勺"], steps: ["西兰花焯水", "爆香蒜末", "大火翻炒2分钟", "加盐出锅"], protein: 6, carb: 8, fat: 3 },
+  { id: 7, name: "鱼香肉丝", cal: 245, tag: "经典", emoji: "🥢", color: G.amber, time: "20分钟", ingredients: ["猪里脊 200g", "木耳 30g", "胡萝卜 半根", "豆瓣酱 1勺", "醋 1勺", "糖 1勺"], steps: ["肉丝腌制", "炒香豆瓣酱", "下肉丝和配菜翻炒", "加鱼香汁炒匀"], protein: 22, carb: 14, fat: 10 },
+  { id: 8, name: "回锅肉", cal: 320, tag: "硬菜", emoji: "🥩", color: G.amber, time: "30分钟", ingredients: ["五花肉 250g", "青椒 2个", "豆瓣酱 1勺", "豆豉 半勺"], steps: ["五花肉煮熟切片", "煸炒出油", "加豆瓣酱豆豉炒香", "下青椒翻炒出锅"], protein: 20, carb: 5, fat: 24 },
+  { id: 9, name: "紫菜蛋花汤", cal: 55, tag: "低卡", emoji: "🍜", color: G.blue, time: "8分钟", ingredients: ["紫菜 10g", "鸡蛋 1个", "香油 几滴", "盐 适量"], steps: ["烧水放紫菜", "淋入蛋液", "加盐香油出锅"], protein: 5, carb: 3, fat: 2 },
+  { id: 10, name: "清炒时蔬", cal: 65, tag: "素食", emoji: "🥬", color: G.green, time: "10分钟", ingredients: ["时蔬 300g", "大蒜 3瓣", "盐 适量", "食用油 1勺"], steps: ["蔬菜洗净切段", "爆香蒜末", "大火翻炒", "加盐出锅"], protein: 3, carb: 7, fat: 2 },
+  { id: 11, name: "糖醋排骨", cal: 380, tag: "硬菜", emoji: "🍖", color: G.amber, time: "45分钟", ingredients: ["排骨 400g", "糖 2勺", "醋 3勺", "生抽 1勺", "料酒 1勺"], steps: ["排骨焯水", "炸至金黄", "调糖醋汁炒匀", "收汁出锅"], protein: 22, carb: 20, fat: 22 },
+  { id: 12, name: "水煮牛肉", cal: 310, tag: "经典", emoji: "🥩", color: G.red, time: "30分钟", ingredients: ["牛肉 250g", "豆芽 100g", "豆瓣酱 2勺", "花椒辣椒 适量"], steps: ["牛肉切片腌制", "炒豆瓣酱加水烧开", "下牛肉片烫熟", "浇热油激香"], protein: 30, carb: 8, fat: 16 },
+  { id: 13, name: "干煸四季豆", cal: 120, tag: "素食", emoji: "🫘", color: G.green, time: "15分钟", ingredients: ["四季豆 300g", "猪肉末 50g", "干辣椒 适量", "生抽 1勺"], steps: ["四季豆干煸至皮皱", "加肉末炒熟", "加调料翻炒均匀"], protein: 8, carb: 10, fat: 5 },
+  { id: 14, name: "酸辣土豆丝", cal: 95, tag: "素食", emoji: "🥔", color: G.amber, time: "10分钟", ingredients: ["土豆 2个", "干辣椒 3个", "醋 1勺", "盐 适量"], steps: ["土豆切丝泡水", "爆香辣椒", "大火翻炒", "加醋盐出锅"], protein: 2, carb: 20, fat: 1 },
+  { id: 15, name: "葱爆羊肉", cal: 290, tag: "硬菜", emoji: "🍖", color: G.amber, time: "15分钟", ingredients: ["羊肉 250g", "大葱 2根", "生抽 1勺", "料酒 1勺"], steps: ["羊肉切片腌制", "大火爆炒羊肉", "加葱段翻炒", "调味出锅"], protein: 26, carb: 4, fat: 18 },
+  { id: 16, name: "香菇炖鸡", cal: 220, tag: "家常", emoji: "🍗", color: G.teal, time: "40分钟", ingredients: ["鸡腿 2个", "香菇 6朵", "生抽 2勺", "料酒 1勺"], steps: ["鸡腿焯水", "炒香香菇", "加鸡腿和调料", "小火炖30分钟"], protein: 28, carb: 6, fat: 10 },
+  { id: 17, name: "扬州炒饭", cal: 320, tag: "主食", emoji: "🍳", color: G.amber, time: "15分钟", ingredients: ["米饭 200g", "鸡蛋 2个", "虾仁 50g", "火腿 30g", "葱花 适量"], steps: ["鸡蛋炒散", "下米饭翻炒", "加配料炒匀", "加盐葱花出锅"], protein: 14, carb: 45, fat: 10 },
+  { id: 18, name: "地三鲜", cal: 185, tag: "素食", emoji: "🍆", color: G.green, time: "20分钟", ingredients: ["茄子 1个", "土豆 1个", "青椒 2个", "生抽 1勺", "蒜末 适量"], steps: ["食材切块分别油炸", "爆香蒜末", "加所有食材翻炒", "调味出锅"], protein: 4, carb: 22, fat: 8 },
+  { id: 19, name: "酱牛肉", cal: 255, tag: "硬菜", emoji: "🥩", color: G.teal, time: "90分钟", ingredients: ["牛腱子 500g", "生抽 3勺", "老抽 1勺", "料酒 2勺", "香料 适量"], steps: ["牛肉焯水", "加调料和香料", "大火烧开小火卤", "冷却切片"], protein: 35, carb: 3, fat: 12 },
+  { id: 20, name: "凉拌黄瓜", cal: 45, tag: "低卡", emoji: "🥒", color: G.green, time: "10分钟", ingredients: ["黄瓜 2根", "蒜末 适量", "醋 1勺", "香油 几滴", "盐 适量"], steps: ["黄瓜拍碎切段", "加蒜末醋盐", "淋香油拌匀"], protein: 2, carb: 6, fat: 1 },
+  { id: 21, name: "蒸蛋羹", cal: 85, tag: "低卡", emoji: "🥚", color: G.blue, time: "15分钟", ingredients: ["鸡蛋 2个", "温水 适量", "生抽 1勺", "香油 几滴"], steps: ["鸡蛋打散加温水过滤", "覆保鲜膜蒸12分钟", "淋生抽香油"], protein: 10, carb: 1, fat: 5 },
+  { id: 22, name: "辣子鸡", cal: 310, tag: "经典", emoji: "🌶️", color: G.red, time: "30分钟", ingredients: ["鸡腿肉 300g", "干辣椒 20个", "花椒 适量", "葱姜蒜 适量"], steps: ["鸡肉切块腌制炸熟", "爆香花椒辣椒", "下鸡块翻炒", "调味出锅"], protein: 28, carb: 8, fat: 18 },
+  { id: 23, name: "韭菜炒鸡蛋", cal: 155, tag: "家常", emoji: "🥚", color: G.green, time: "10分钟", ingredients: ["韭菜 200g", "鸡蛋 3个", "盐 适量", "食用油 1勺"], steps: ["鸡蛋炒散", "下韭菜翻炒", "加盐调味出锅"], protein: 12, carb: 5, fat: 9 },
+  { id: 24, name: "冬瓜排骨汤", cal: 180, tag: "汤类", emoji: "🍲", color: G.teal, time: "60分钟", ingredients: ["排骨 300g", "冬瓜 400g", "姜 3片", "盐 适量"], steps: ["排骨焯水", "加水和姜煮沸", "下冬瓜炖30分钟", "加盐出锅"], protein: 20, carb: 8, fat: 8 },
+  { id: 25, name: "蚝油生菜", cal: 70, tag: "低卡", emoji: "🥬", color: G.green, time: "8分钟", ingredients: ["生菜 300g", "蚝油 1勺", "蒜末 适量", "食用油 少许"], steps: ["生菜焯水铺盘", "爆香蒜末", "加蚝油炒匀", "淋在生菜上"], protein: 3, carb: 6, fat: 2 },
+  { id: 26, name: "粉蒸肉", cal: 360, tag: "硬菜", emoji: "🍖", color: G.amber, time: "60分钟", ingredients: ["五花肉 300g", "蒸肉粉 50g", "豆瓣酱 1勺", "料酒 1勺"], steps: ["五花肉切片腌制", "裹蒸肉粉", "上锅蒸40分钟"], protein: 18, carb: 22, fat: 24 },
+  { id: 27, name: "拍黄瓜", cal: 40, tag: "低卡", emoji: "🥒", color: G.green, time: "5分钟", ingredients: ["黄瓜 2根", "蒜末 适量", "辣椒油 少许", "醋盐 适量"], steps: ["黄瓜拍碎", "加所有调料", "拌匀即可"], protein: 1, carb: 5, fat: 1 },
+  { id: 28, name: "肉末茄子", cal: 210, tag: "家常", emoji: "🍆", color: G.amber, time: "20分钟", ingredients: ["茄子 2个", "猪肉末 100g", "豆瓣酱 1勺", "蒜末 适量"], steps: ["茄子切条蒸软", "炒香肉末和豆瓣酱", "加茄子翻炒", "调味出锅"], protein: 12, carb: 14, fat: 10 },
+  { id: 29, name: "西湖牛肉羹", cal: 165, tag: "汤类", emoji: "🍲", color: G.teal, time: "20分钟", ingredients: ["牛肉末 150g", "豆腐 100g", "鸡蛋 1个", "生抽 1勺", "淀粉 适量"], steps: ["牛肉末炒熟", "加水和豆腐煮沸", "勾芡淋蛋液", "调味出锅"], protein: 18, carb: 8, fat: 6 },
+  { id: 30, name: "白灼虾", cal: 115, tag: "高蛋白", emoji: "🦐", color: G.teal, time: "10分钟", ingredients: ["鲜虾 300g", "姜片 适量", "料酒 1勺", "蘸料 适量"], steps: ["水中加姜片料酒煮沸", "下虾煮3分钟", "捞出摆盘", "配蘸料食用"], protein: 22, carb: 1, fat: 2 },
+  { id: 31, name: "土豆炖牛肉", cal: 285, tag: "硬菜", emoji: "🥩", color: G.amber, time: "60分钟", ingredients: ["牛腩 300g", "土豆 2个", "生抽 2勺", "料酒 1勺", "葱姜 适量"], steps: ["牛腩切块焯水", "炒香葱姜加牛腩", "加调料和水炖40分钟", "下土豆再炖15分钟"], protein: 25, carb: 20, fat: 12 },
+  { id: 32, name: "木须肉", cal: 230, tag: "家常", emoji: "🥢", color: G.amber, time: "20分钟", ingredients: ["猪里脊 150g", "鸡蛋 2个", "木耳 20g", "黄瓜 半根"], steps: ["里脊切片腌制", "鸡蛋炒散盛出", "炒肉片和配菜", "加鸡蛋调味翻炒"], protein: 22, carb: 8, fat: 12 },
+  { id: 33, name: "酸菜鱼", cal: 260, tag: "经典", emoji: "🐟", color: G.teal, time: "30分钟", ingredients: ["草鱼 500g", "酸菜 200g", "干辣椒 适量", "花椒 适量"], steps: ["鱼切片腌制", "炒香酸菜加水煮沸", "下鱼片煮熟", "浇热油"], protein: 28, carb: 6, fat: 12 },
+  { id: 34, name: "香煎豆腐", cal: 145, tag: "素食", emoji: "🟡", color: G.amber, time: "15分钟", ingredients: ["老豆腐 300g", "生抽 1勺", "蚝油 半勺", "葱花 适量"], steps: ["豆腐切厚片", "煎至两面金黄", "加调料翻炒", "撒葱花出锅"], protein: 14, carb: 5, fat: 8 },
+  { id: 35, name: "小鸡炖蘑菇", cal: 240, tag: "家常", emoji: "🍄", color: G.teal, time: "50分钟", ingredients: ["鸡腿 2个", "榛蘑 50g", "生抽 2勺", "料酒 1勺"], steps: ["鸡腿焯水切块", "炒香鸡块", "加蘑菇和调料", "小火炖40分钟"], protein: 26, carb: 8, fat: 12 },
+  { id: 36, name: "凉拌木耳", cal: 50, tag: "低卡", emoji: "🖤", color: G.gray, time: "10分钟", ingredients: ["木耳 50g", "蒜末 适量", "醋 1勺", "香油 几滴", "盐 适量"], steps: ["木耳泡发焯水", "加蒜末醋盐", "淋香油拌匀"], protein: 2, carb: 8, fat: 1 },
+  { id: 37, name: "青椒炒肉", cal: 220, tag: "家常", emoji: "🌶️", color: G.green, time: "15分钟", ingredients: ["猪肉 200g", "青椒 3个", "生抽 1勺", "蒜末 适量"], steps: ["肉切片腌制", "爆香蒜末炒肉", "下青椒翻炒", "调味出锅"], protein: 20, carb: 6, fat: 12 },
+  { id: 38, name: "蒸排骨", cal: 290, tag: "硬菜", emoji: "🍖", color: G.teal, time: "40分钟", ingredients: ["排骨 400g", "豆豉 1勺", "生抽 1勺", "蒜末 适量"], steps: ["排骨腌制20分钟", "铺上豆豉蒜末", "上锅蒸30分钟"], protein: 24, carb: 4, fat: 18 },
+  { id: 39, name: "虎皮鸡蛋", cal: 175, tag: "家常", emoji: "🥚", color: G.amber, time: "20分钟", ingredients: ["鸡蛋 4个", "生抽 2勺", "老抽 半勺", "糖 半勺"], steps: ["鸡蛋煮熟去壳", "油炸至虎皮", "加调料卤10分钟"], protein: 14, carb: 4, fat: 12 },
+  { id: 40, name: "萝卜炖羊肉", cal: 270, tag: "硬菜", emoji: "🍲", color: G.teal, time: "70分钟", ingredients: ["羊肉 300g", "白萝卜 300g", "姜 5片", "料酒 2勺"], steps: ["羊肉焯水", "加姜料酒炖40分钟", "下萝卜再炖20分钟", "调味出锅"], protein: 26, carb: 10, fat: 14 },
+  { id: 41, name: "炒合菜", cal: 130, tag: "素食", emoji: "🥗", color: G.green, time: "15分钟", ingredients: ["豆芽 100g", "韭菜 100g", "粉条 50g", "鸡蛋 1个"], steps: ["粉条泡软", "鸡蛋炒散", "下所有食材翻炒", "调味出锅"], protein: 8, carb: 16, fat: 5 },
+  { id: 42, name: "葱油鸡", cal: 250, tag: "经典", emoji: "🍗", color: G.amber, time: "40分钟", ingredients: ["整鸡 半只", "葱 3根", "生抽 2勺", "葱油 适量"], steps: ["整鸡煮熟", "切块摆盘", "铺葱丝淋生抽", "浇热葱油激香"], protein: 30, carb: 2, fat: 14 },
+  { id: 43, name: "莲藕排骨汤", cal: 200, tag: "汤类", emoji: "🍲", color: G.teal, time: "70分钟", ingredients: ["排骨 300g", "莲藕 300g", "姜 3片", "盐 适量"], steps: ["排骨焯水", "加水和姜煮沸", "下莲藕炖50分钟", "加盐出锅"], protein: 18, carb: 16, fat: 8 },
+  { id: 44, name: "手撕包菜", cal: 75, tag: "素食", emoji: "🥬", color: G.green, time: "10分钟", ingredients: ["包菜 半个", "干辣椒 3个", "蒜末 适量", "生抽 1勺"], steps: ["包菜手撕成片", "爆香辣椒蒜末", "大火翻炒", "加生抽出锅"], protein: 3, carb: 10, fat: 2 },
+  { id: 45, name: "蒜泥白肉", cal: 300, tag: "经典", emoji: "🥩", color: G.teal, time: "30分钟", ingredients: ["五花肉 300g", "蒜泥 适量", "生抽 1勺", "辣椒油 1勺"], steps: ["五花肉煮熟切片", "卷黄瓜丝摆盘", "调蒜泥酱汁", "淋在肉上"], protein: 20, carb: 2, fat: 24 },
+  { id: 46, name: "三杯鸡", cal: 295, tag: "经典", emoji: "🍗", color: G.amber, time: "30分钟", ingredients: ["鸡腿 2个", "九层塔 适量", "米酒 1杯", "生抽 1杯", "麻油 1杯"], steps: ["鸡腿切块", "三杯料烧开", "下鸡块炖20分钟", "加九层塔收汁"], protein: 28, carb: 6, fat: 16 },
+  { id: 47, name: "豆腐脑", cal: 80, tag: "早餐", emoji: "🍮", color: G.blue, time: "10分钟", ingredients: ["嫩豆腐 300g", "卤汁 适量", "葱花 适量", "辣椒油 少许"], steps: ["豆腐脑盛碗", "淋卤汁", "加葱花辣椒油"], protein: 8, carb: 4, fat: 3 },
+  { id: 48, name: "炸酱面", cal: 420, tag: "主食", emoji: "🍝", color: G.amber, time: "30分钟", ingredients: ["面条 200g", "猪肉末 100g", "黄酱 2勺", "黄瓜 半根", "豆芽 适量"], steps: ["炒肉末加黄酱炒香", "面条煮熟", "配菜切丝铺面", "加炸酱拌匀"], protein: 20, carb: 58, fat: 14 },
+  { id: 49, name: "冰糖银耳羹", cal: 120, tag: "甜品", emoji: "🍮", color: G.blue, time: "40分钟", ingredients: ["银耳 20g", "冰糖 30g", "枸杞 适量", "红枣 5颗"], steps: ["银耳泡发撕小朵", "加水和冰糖", "小火煮30分钟至粘稠", "加枸杞出锅"], protein: 2, carb: 28, fat: 0 },
+  { id: 50, name: "皮蛋瘦肉粥", cal: 180, tag: "早餐", emoji: "🍚", color: G.teal, time: "40分钟", ingredients: ["大米 100g", "皮蛋 1个", "瘦肉 80g", "姜丝 适量", "盐 适量"], steps: ["大米煮至软烂", "加入肉丝姜丝", "放皮蛋煮5分钟", "加盐调味"], protein: 14, carb: 28, fat: 4 },
+];
+
+const CATEGORIES = [
+  { id: "all", label: "全部", emoji: "🍽️" },
+  { id: "meat", label: "肉类", emoji: "🥩" },
+  { id: "fish", label: "鱼虾", emoji: "🐟" },
+  { id: "veg", label: "蔬菜", emoji: "🥦" },
+  { id: "soup", label: "汤类", emoji: "🍲" },
+  { id: "staple", label: "主食", emoji: "🍚" },
+  { id: "other", label: "其他", emoji: "🥢" },
+];
+
+const RECIPE_CATEGORY = {
+  1: "meat", 2: "other", 3: "meat", 4: "fish", 5: "other",
+  6: "veg", 7: "meat", 8: "meat", 9: "soup", 10: "veg",
+  11: "meat", 12: "meat", 13: "veg", 14: "veg", 15: "meat",
+  16: "meat", 17: "staple", 18: "veg", 19: "meat", 20: "veg",
+  21: "other", 22: "meat", 23: "other", 24: "soup", 25: "veg",
+  26: "meat", 27: "veg", 28: "other", 29: "soup", 30: "fish",
+  31: "meat", 32: "meat", 33: "fish", 34: "other", 35: "meat",
+  36: "veg", 37: "meat", 38: "meat", 39: "other", 40: "meat",
+  41: "veg", 42: "meat", 43: "soup", 44: "veg", 45: "meat",
+  46: "meat", 47: "other", 48: "staple", 49: "other", 50: "staple",
+};
 
 const FOOD_DB = [
   { name: "米饭(100g)", cal: 116 },
@@ -95,20 +171,8 @@ function WeightChart({ data }) {
   );
 }
 
-function RecipeCard({ r, onClick }) {
-  return (
-    <div onClick={() => onClick(r)} style={{ background: r.color.bg, borderRadius: 12, padding: "14px", cursor: "pointer", display: "flex", alignItems: "center", gap: 12, border: `1px solid ${r.color.light}` }}>
-      <div style={{ fontSize: 28 }}>{r.emoji}</div>
-      <div style={{ flex: 1 }}>
-        <div style={{ fontWeight: 500, fontSize: 15, color: r.color.dark }}>{r.name}</div>
-        <div style={{ fontSize: 12, color: r.color.mid, marginTop: 2 }}>{r.time} · {r.cal} 千卡</div>
-      </div>
-      <span style={{ background: r.color.light, color: r.color.dark, fontSize: 11, padding: "2px 8px", borderRadius: 20, fontWeight: 500 }}>{r.tag}</span>
-    </div>
-  );
-}
 
-function RecipeDetail({ r, onBack }) {
+function RecipeDetail({ r, onBack, staple, onAdd }) {
   return (
     <div>
       <button onClick={onBack} style={{ background: "none", border: "none", color: G.teal.mid, fontWeight: 500, fontSize: 14, cursor: "pointer", padding: "0 0 12px 0" }}>← 返回食谱</button>
@@ -141,6 +205,16 @@ function RecipeDetail({ r, onBack }) {
             <div style={{ fontSize: 14, lineHeight: 1.6, paddingTop: 2 }}>{step}</div>
           </div>
         ))}
+      </div>
+      <div style={{ background: G.amber.bg, borderRadius: 12, padding: "12px 14px", marginTop: 14, border: `1px solid ${G.amber.light}` }}>
+        <div style={{ fontSize: 13, fontWeight: 500, color: G.amber.dark, marginBottom: 6 }}>搭配主食热量</div>
+        <div style={{ fontSize: 13, color: G.amber.dark }}>
+          {r.name} + {staple.name}（100g）共计：
+          <span style={{ fontWeight: 500, fontSize: 16 }}> {r.cal + staple.cal} 千卡</span>
+        </div>
+        <button onClick={() => onAdd(r, staple)} style={{ width: "100%", marginTop: 10, padding: "10px 0", borderRadius: 10, border: "none", background: G.green.mid, color: "#fff", fontSize: 13, fontWeight: 500, cursor: "pointer" }}>
+          + 添加到今日饮食记录
+        </button>
       </div>
     </div>
   );
@@ -327,7 +401,8 @@ export default function App() {
   ]);
   const [search, setSearch] = useState("");
   const [recipeSearch, setRecipeSearch] = useState("");
-
+  const [selectedStaple, setSelectedStaple] = useState(STAPLES[0]);
+  const [recipeCategory, setRecipeCategory] = useState("all");
   const [showAddEx, setShowAddEx] = useState(false);
   const [newEx, setNewEx] = useState({ name: "", icon: "🏃", duration: 30, cal: 0, preset: null });
   useEffect(() => {
@@ -470,8 +545,7 @@ async function addExercise() {
   const exCal = exercises.filter(e => e.done).reduce((s, e) => s + e.cal, 0);
   const curW = weights.length ? weights[weights.length - 1].weight : "--";
   const filteredFood = FOOD_DB.filter(f => f.name.includes(search));
-  const filteredRecipes = RECIPES.filter(r => r.name.includes(recipeSearch) || r.tag.includes(recipeSearch));
-
+  
   const tabs = [
     { id: "home", icon: "🏠", label: "首页" },
     { id: "diet", icon: "🥗", label: "饮食" },
@@ -498,7 +572,7 @@ async function addExercise() {
   );
 
   return (
-    <div style={{ maxWidth: 420, margin: "0 auto", fontFamily: "sans-serif", paddingBottom: 70 }}>
+    <div style={{ maxWidth: 420, margin: "0 auto", fontFamily: "sans-serif", paddingBottom: 120 }}>
       <div style={{ background: G.green.mid, padding: "18px 20px 14px", borderRadius: "0 0 20px 20px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
@@ -597,19 +671,91 @@ async function addExercise() {
               </div>
             )}
             {dietSub === "recipes" && !selectedRecipe && (
-              <div>
-                <div style={{ fontSize: 13, color: G.gray.mid, marginBottom: 10 }}>🍜 中餐健康家常系列 · 第一版</div>
-                <div style={{ marginBottom: 12 }}>
-                  <input value={recipeSearch} onChange={e => setRecipeSearch(e.target.value)} placeholder="搜索食谱或标签..." style={{ width: "100%", padding: "8px 12px", borderRadius: 20, border: `0.5px solid ${G.green.light}`, fontSize: 13, boxSizing: "border-box", outline: "none" }} />
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                  {filteredRecipes.map(r => <RecipeCard key={r.id} r={r} onClick={setSelectedRecipe} />)}
-                </div>
+  <div>
+    <div style={{ fontSize: 13, color: G.gray.mid, marginBottom: 10 }}>🍜 50道中餐经典 · 卡路里参考</div>
+
+    {/* 搜索框 */}
+    <div style={{ position: "relative", marginBottom: 14 }}>
+      <input value={recipeSearch} onChange={e => setRecipeSearch(e.target.value)} placeholder="搜索食谱..." style={{ width: "100%", padding: "10px 14px", borderRadius: 22, border: `0.5px solid ${G.green.light}`, fontSize: 13, boxSizing: "border-box", outline: "none" }} />
+      {recipeSearch && (
+        <div style={{ position: "absolute", top: 44, left: 0, right: 0, background: "#fff", borderRadius: 12, border: `0.5px solid ${G.gray.light}`, zIndex: 10 }}>
+          {RECIPES.filter(r => r.name.includes(recipeSearch)).map(r => (
+            <div key={r.id} onClick={() => { setSelectedRecipe(r); setRecipeSearch(""); }} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", borderBottom: `0.5px solid ${G.gray.bg}`, cursor: "pointer" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 18 }}>{r.emoji}</span>
+                <span style={{ fontSize: 14 }}>{r.name}</span>
               </div>
-            )}
+              <span style={{ fontSize: 12, color: G.amber.mid }}>{r.cal}千卡</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+
+    {/* 主食选择 */}
+    <div style={{ marginBottom: 14 }}>
+      <div style={{ fontSize: 13, fontWeight: 500, color: G.gray.dark, marginBottom: 8 }}>主食选择 <span style={{ fontSize: 11, color: G.gray.mid, fontWeight: 400 }}>（每100g）</span></div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6 }}>
+        {STAPLES.map(s => (
+          <button key={s.name} onClick={() => setSelectedStaple(s)} style={{ padding: "8px 4px", borderRadius: 10, border: `0.5px solid ${selectedStaple?.name === s.name ? G.teal.mid : G.gray.light}`, background: selectedStaple?.name === s.name ? G.teal.bg : "#fff", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+            <span style={{ fontSize: 18 }}>{s.icon}</span>
+            <span style={{ fontSize: 11, color: selectedStaple?.name === s.name ? G.teal.dark : G.gray.dark }}>{s.name}</span>
+            <span style={{ fontSize: 10, color: G.teal.mid }}>{s.cal}千卡</span>
+          </button>
+        ))}
+      </div>
+    </div>
+
+    {/* TOP 10 */}
+  {/* 分类选择 */}
+    <div style={{ marginBottom: 14 }}>
+      <div style={{ fontSize: 13, fontWeight: 500, color: G.gray.dark, marginBottom: 8 }}>菜品分类</div>
+      <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 4 }}>
+        {CATEGORIES.map(c => (
+          <button key={c.id} onClick={() => setRecipeCategory(c.id)} style={{ flexShrink: 0, padding: "6px 12px", borderRadius: 20, border: `0.5px solid ${recipeCategory === c.id ? G.green.mid : G.gray.light}`, background: recipeCategory === c.id ? G.green.mid : "#fff", color: recipeCategory === c.id ? "#fff" : G.gray.dark, fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
+            <span style={{ fontSize: 14 }}>{c.emoji}</span>
+            <span>{c.label}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+
+    {/* 菜品列表 */}
+    <div>
+      <div style={{ fontSize: 13, fontWeight: 500, color: G.gray.dark, marginBottom: 8 }}>
+        {CATEGORIES.find(c => c.id === recipeCategory)?.emoji} {CATEGORIES.find(c => c.id === recipeCategory)?.label}
+        <span style={{ fontSize: 11, color: G.gray.mid, fontWeight: 400, marginLeft: 6 }}>
+          共 {RECIPES.filter(r => recipeCategory === "all" || RECIPE_CATEGORY[r.id] === recipeCategory).length} 道
+        </span>
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {RECIPES.filter(r => recipeCategory === "all" || RECIPE_CATEGORY[r.id] === recipeCategory).map((r, i) => (
+          <div key={r.id} onClick={() => setSelectedRecipe(r)} style={{ display: "flex", alignItems: "center", gap: 10, background: "#fff", borderRadius: 12, padding: "10px 12px", cursor: "pointer", border: `0.5px solid ${G.gray.light}` }}>
+            <div style={{ width: 22, height: 22, borderRadius: 11, background: i < 3 && recipeCategory === "all" ? G.amber.mid : G.gray.light, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: i < 3 && recipeCategory === "all" ? "#fff" : G.gray.mid, fontWeight: 500, flexShrink: 0 }}>{i + 1}</div>
+            <span style={{ fontSize: 20 }}>{r.emoji}</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14, fontWeight: 500, color: G.gray.dark }}>{r.name}</div>
+            </div>
+            <span style={{ fontSize: 11, background: G.green.bg, color: G.green.dark, padding: "2px 8px", borderRadius: 20 }}>{r.tag}</span>
+            <span style={{ fontSize: 13, color: G.amber.mid, fontWeight: 500 }}>{r.cal}千卡</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+)}
             {dietSub === "recipes" && selectedRecipe && (
-              <RecipeDetail r={selectedRecipe} onBack={() => setSelectedRecipe(null)} />
-            )}
+  <RecipeDetail
+    r={selectedRecipe}
+    onBack={() => setSelectedRecipe(null)}
+    staple={selectedStaple}
+    onAdd={(dish, staple) => {
+      addFood({ name: `${dish.name}+${staple.name}`, cal: dish.cal + staple.cal });
+      setSelectedRecipe(null);
+      setDietSub("record");
+    }}
+  />
+)}
           </div>
         )}
 
