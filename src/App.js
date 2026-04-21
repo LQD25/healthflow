@@ -145,7 +145,104 @@ function MiniBar({ val, max, color }) {
     </div>
   );
 }
+function StatsCalChart({ cal, goal }) {
+  const max = Math.max(cal, goal) + 300;
+  const W = 300, H = 120, padL = 40, padR = 20, padT = 20, padB = 30;
+  const barW = 50;
+  const barH = v => ((v / max) * (H - padT - padB));
+  const barY = v => H - padB - barH(v);
+  const goalY = H - padB - barH(goal);
 
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: H }}>
+      <line x1={padL} y1={goalY} x2={W - padR} y2={goalY} stroke={G.amber.mid} strokeWidth={1} strokeDasharray="4,3" />
+      <text x={W - padR} y={goalY - 4} fontSize={9} fill={G.amber.mid} textAnchor="end">目标 {goal}</text>
+      <rect x={(W - barW) / 2} y={barY(cal)} width={barW} height={barH(cal)}
+        fill={cal > goal ? G.red.mid : G.green.mid} rx={4} />
+      <text x={W / 2} y={H - padB + 14} textAnchor="middle" fontSize={11} fill={G.gray.mid}>今日</text>
+      <text x={W / 2} y={barY(cal) - 6} textAnchor="middle" fontSize={11} fill={cal > goal ? G.red.dark : G.green.dark} fontWeight="500">{cal} 千卡</text>
+    </svg>
+  );
+}
+
+function NutritionRing({ foodLog }) {
+  const protein = Math.round(foodLog.reduce((s, f) => s + (f.protein || 0), 0));
+  const carb = Math.round(foodLog.reduce((s, f) => s + (f.carb || 0), 0));
+  const fat = Math.round(foodLog.reduce((s, f) => s + (f.fat || 0), 0));
+  const total = protein + carb + fat || 1;
+  const pPct = Math.round(protein / total * 100);
+  const cPct = Math.round(carb / total * 100);
+  const fPct = 100 - pPct - cPct;
+  const r = 50, cx = 70, cy = 70, stroke = 14;
+  const circ = 2 * Math.PI * r;
+  const pDash = circ * pPct / 100;
+  const cDash = circ * cPct / 100;
+  const fDash = circ * fPct / 100;
+
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+      <svg width={140} height={140}>
+        <circle cx={cx} cy={cy} r={r} fill="none" stroke={G.gray.light} strokeWidth={stroke} />
+        <circle cx={cx} cy={cy} r={r} fill="none" stroke={G.teal.mid} strokeWidth={stroke}
+          strokeDasharray={`${pDash} ${circ - pDash}`} strokeDashoffset={circ * 0.25} />
+        <circle cx={cx} cy={cy} r={r} fill="none" stroke={G.amber.mid} strokeWidth={stroke}
+          strokeDasharray={`${cDash} ${circ - cDash}`} strokeDashoffset={circ * 0.25 - pDash} />
+        <circle cx={cx} cy={cy} r={r} fill="none" stroke={G.blue.mid} strokeWidth={stroke}
+          strokeDasharray={`${fDash} ${circ - fDash}`} strokeDashoffset={circ * 0.25 - pDash - cDash} />
+        <text x={cx} y={cy - 4} textAnchor="middle" fontSize={11} fill={G.gray.dark}>今日</text>
+        <text x={cx} y={cy + 12} textAnchor="middle" fontSize={11} fill={G.gray.dark}>营养</text>
+      </svg>
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {[["蛋白质", `${protein}g`, `${pPct}%`, G.teal], ["碳水", `${carb}g`, `${cPct}%`, G.amber], ["脂肪", `${fat}g`, `${fPct}%`, G.blue]].map(([label, val, pct, c]) => (
+          <div key={label} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ width: 10, height: 10, borderRadius: 5, background: c.mid }} />
+            <span style={{ fontSize: 13, color: G.gray.dark, width: 44 }}>{label}</span>
+            <span style={{ fontSize: 13, fontWeight: 500, color: c.dark }}>{val}</span>
+            <span style={{ fontSize: 11, color: c.mid }}>{pct}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function WeightPredictChart({ data }) {
+  if (!data.length) return <div style={{ textAlign: "center", color: G.gray.mid, fontSize: 13, padding: 20 }}>暂无数据</div>;
+  const vals = data.map(d => d.weight);
+  const min = Math.min(...vals) - 0.5;
+  const max = Math.max(...vals) + 0.5;
+  const W = 300, H = 120, pad = { l: 36, r: 30, t: 14, b: 28 };
+  const totalPts = data.length + 3;
+  const x = i => pad.l + i * ((W - pad.l - pad.r) / (totalPts - 1));
+  const y = v => pad.t + (1 - (v - min) / (max - min)) * (H - pad.t - pad.b);
+  const n = data.length;
+  const sumX = data.reduce((s, _, i) => s + i, 0);
+  const sumY = data.reduce((s, d) => s + d.weight, 0);
+  const sumXY = data.reduce((s, d, i) => s + i * d.weight, 0);
+  const sumX2 = data.reduce((s, _, i) => s + i * i, 0);
+  const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+  const intercept = (sumY - slope * sumX) / n;
+  const predict = i => intercept + slope * i;
+  const pts = data.map((d, i) => `${x(i)},${y(d.weight)}`).join(" ");
+  const predPts = [n - 1, n, n + 1, n + 2].map(i => `${x(i)},${y(predict(i))}`).join(" ");
+
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: H }}>
+      <polyline points={pts} fill="none" stroke={G.teal.mid} strokeWidth={2} strokeLinejoin="round" />
+      <polyline points={predPts} fill="none" stroke={G.teal.mid} strokeWidth={1.5} strokeDasharray="4,3" opacity={0.7} />
+      {data.map((d, i) => (
+        <g key={i}>
+          <circle cx={x(i)} cy={y(d.weight)} r={3} fill={G.teal.mid} />
+          <text x={x(i)} y={H - 8} textAnchor="middle" fontSize={9} fill={G.gray.mid}>{d.day}</text>
+        </g>
+      ))}
+      <text x={x(n + 1)} y={y(predict(n + 1)) - 6} fontSize={9} fill={G.teal.mid}>预测</text>
+      {[min + 0.5, min + 1].map((v, i) => (
+        <text key={i} x={pad.l - 4} y={y(v) + 4} textAnchor="end" fontSize={9} fill={G.gray.mid}>{v.toFixed(1)}</text>
+      ))}
+    </svg>
+  );
+}
 function WeightChart({ data }) {
   if (!data.length) return <div style={{ textAlign: "center", color: G.gray.mid, fontSize: 13, padding: 20 }}>暂无数据</div>;
   const vals = data.map(d => d.weight);
@@ -388,6 +485,7 @@ export default function App() {
   const [tab, setTab] = useState("home");
   const [dietSub, setDietSub] = useState("record");
   const [selectedRecipe, setSelectedRecipe] = useState(null);
+  const [statsTab, setStatsTab] = useState("cal");
   const [foodLog, setFoodLog] = useState([]);
   const [weights, setWeights] = useState([]);
   const [exercises, setExercises] = useState([]);
@@ -551,8 +649,9 @@ async function addExercise() {
     { id: "diet", icon: "🥗", label: "饮食" },
     { id: "weight", icon: "⚖️", label: "体重" },
     { id: "exercise", icon: "🏃", label: "运动" },
-    { id: "ai", icon: "🤖", label: "AI助手" },
+  
     { id: "profile", icon: "👤", label: "我的" },
+    { id: "stats", icon: "📊", label: "统计" },
   ];
 
   if (authLoading) return (
@@ -880,6 +979,82 @@ async function addExercise() {
             </div>
           </div>
         )}
+        {tab === "stats" && (
+  <div>
+    {/* 子标签 */}
+    <div style={{ display: "flex", gap: 6, marginBottom: 14, background: G.gray.bg, borderRadius: 12, padding: 4 }}>
+      {[["cal", "🔥 热量"], ["nutrition", "🥗 营养素"], ["weight", "⚖️ 体重"]].map(([id, label]) => (
+        <button key={id} onClick={() => setStatsTab(id)} style={{ flex: 1, padding: "7px 0", borderRadius: 9, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 500, background: statsTab === id ? "#fff" : "transparent", color: statsTab === id ? G.green.dark : G.gray.mid }}>
+          {label}
+        </button>
+      ))}
+    </div>
+
+    {statsTab === "cal" && (
+      <div>
+        <div style={{ background: G.green.bg, borderRadius: 12, padding: "12px 14px", marginBottom: 14, border: `1px solid ${G.green.light}`, textAlign: "center" }}>
+          <div style={{ fontSize: 11, color: G.green.mid, marginBottom: 4 }}>本周日均热量</div>
+          <div style={{ fontWeight: 500, fontSize: 28, color: G.green.dark }}>
+            {foodLog.length ? Math.round(totalCal) : "--"} <span style={{ fontSize: 14 }}>千卡</span>
+          </div>
+        </div>
+        <div style={{ background: "#fff", borderRadius: 12, padding: "12px 14px", border: `0.5px solid ${G.gray.light}` }}>
+          <div style={{ fontSize: 13, fontWeight: 500, color: G.gray.dark, marginBottom: 4 }}>今日热量</div>
+          <div style={{ fontSize: 11, color: G.gray.mid, marginBottom: 8 }}>绿色=达标 红色=超标 虚线=目标</div>
+          <StatsCalChart goal={parseInt(localStorage.getItem("hf_goal") || "1800")} cal={totalCal} />
+        </div>
+      </div>
+    )}
+
+    {statsTab === "nutrition" && (
+      <div>
+        <div style={{ background: "#fff", borderRadius: 12, padding: "14px", marginBottom: 14, border: `0.5px solid ${G.gray.light}` }}>
+          <div style={{ fontSize: 13, fontWeight: 500, color: G.gray.dark, marginBottom: 12 }}>今日营养素分布</div>
+          <NutritionRing foodLog={foodLog} />
+        </div>
+        <div style={{ background: G.green.bg, borderRadius: 12, padding: "14px", border: `1px solid ${G.green.light}` }}>
+          <div style={{ fontSize: 13, fontWeight: 500, color: G.green.dark, marginBottom: 10 }}>营养素建议摄入</div>
+          {[
+            { label: "蛋白质", current: foodLog.reduce((s, f) => s + (f.protein || 0), 0), target: 100, color: G.teal },
+            { label: "碳水", current: foodLog.reduce((s, f) => s + (f.carb || 0), 0), target: 200, color: G.amber },
+            { label: "脂肪", current: foodLog.reduce((s, f) => s + (f.fat || 0), 0), target: 60, color: G.blue },
+          ].map(n => (
+            <div key={n.label} style={{ marginBottom: 10 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}>
+                <span style={{ color: G.gray.dark }}>{n.label}</span>
+                <span style={{ color: n.color.mid }}>{n.current}g / {n.target}g</span>
+              </div>
+              <div style={{ height: 6, background: "#E0E0E0", borderRadius: 3, overflow: "hidden" }}>
+                <div style={{ height: "100%", width: `${Math.min(100, n.current / n.target * 100)}%`, background: n.current > n.target ? G.red.mid : n.color.mid, borderRadius: 3 }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    )}
+
+    {statsTab === "weight" && (
+      <div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
+          {[
+            { label: "当前体重", val: `${curW}kg`, color: G.teal },
+            { label: "距目标", val: weights.length ? `${(parseFloat(curW) - 70).toFixed(1)}kg` : "--", color: G.green },
+          ].map(c => (
+            <div key={c.label} style={{ background: c.color.bg, borderRadius: 12, padding: "14px", border: `1px solid ${c.color.light}`, textAlign: "center" }}>
+              <div style={{ fontSize: 11, color: c.color.mid, marginBottom: 4 }}>{c.label}</div>
+              <div style={{ fontWeight: 500, fontSize: 22, color: c.color.dark }}>{c.val}</div>
+            </div>
+          ))}
+        </div>
+        <div style={{ background: "#fff", borderRadius: 12, padding: "12px 14px", border: `0.5px solid ${G.teal.light}` }}>
+          <div style={{ fontSize: 13, fontWeight: 500, color: G.gray.dark, marginBottom: 4 }}>体重趋势与预测</div>
+          <div style={{ fontSize: 11, color: G.gray.mid, marginBottom: 8 }}>实线=实际 虚线=预测走势</div>
+          <WeightPredictChart data={weights} />
+        </div>
+      </div>
+    )}
+  </div>
+)}
         {tab === "profile" && (
         <ProfileTab user={user} onSignOut={signOut} />
        )}
