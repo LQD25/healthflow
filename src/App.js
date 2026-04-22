@@ -806,7 +806,7 @@ async function addExercise() {
   if (authLoading) return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100vh", gap: 12 }}>
       <div style={{ fontSize: 40 }}>🌿</div>
-      <div style={{ color: G.green.mid, fontSize: 14 }}>HealthFlow 启动中...</div>
+      <div style={{ color: G.green.mid, fontSize: 14 }}>FamilyFit 启动中...</div>
     </div>
   );
 
@@ -825,7 +825,7 @@ async function addExercise() {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
             <div style={{ color: "#fff", fontSize: 11, opacity: 0.85 }}>{new Date().toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
-            <div style={{ color: "#fff", fontWeight: 500, fontSize: 20, marginTop: 2 }}>HealthFlow 🌿</div>
+            <div style={{ color: "#fff", fontWeight: 500, fontSize: 20, marginTop: 2 }}>FamilyFit 🌿</div>
           </div>
           <button onClick={signOut} style={{ background: "rgba(255,255,255,0.2)", border: "none", borderRadius: 20, padding: "6px 12px", color: "#fff", fontSize: 12, cursor: "pointer" }}>退出</button>
         </div>

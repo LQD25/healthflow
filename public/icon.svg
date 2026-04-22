@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="112" fill="#639922"/>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="512" y2="512">
+      <stop offset="0%" stop-color="#7ab52e"/>
+      <stop offset="100%" stop-color="#4a7a18"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <path d="M256 380 C256 380 120 290 120 200 C120 155 155 125 200 130 C225 133 245 148 256 165 C267 148 287 133 312 130 C357 125 392 155 392 200 C392 290 256 380 256 380Z" fill="white" opacity="0.95"/>
+  <circle cx="210" cy="205" r="18" fill="#639922"/>
+  <path d="M185 255 Q210 240 235 255 L235 275 Q210 265 185 275Z" fill="#639922"/>
+  <circle cx="256" cy="198" r="16" fill="#1D9E75"/>
+  <path d="M233 248 Q256 235 279 248 L279 268 Q256 258 233 268Z" fill="#1D9E75"/>
+  <circle cx="300" cy="210" r="13" fill="#BA7517"/>
+  <path d="M280 252 Q300 242 320 252 L320 268 Q300 260 280 268Z" fill="#BA7517"/>
+  <circle cx="330" cy="222" r="11" fill="#E24B4A"/>
+  <path d="M312 258 Q330 250 348 258 L348 272 Q330 265 312 272Z" fill="#E24B4A"/>
+  <text x="256" y="460" textAnchor="middle" fontFamily="Arial, sans-serif" fontWeight="700" fontSize="52" fill="white" letterSpacing="2">FamilyFit</text>
+  <text x="256" y="495" textAnchor="middle" fontFamily="Arial, sans-serif" fontSize="24" fill="white" opacity="0.8">家庭健康管理</text>
+</svg>

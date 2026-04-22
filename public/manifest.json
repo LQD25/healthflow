@@ -1,7 +1,13 @@
 {
-  "short_name": "HealthFlow",
-  "name": "HealthFlow 健康管理",
+  "short_name": "FamilyFit",
+  "name": "FamilyFit 家庭健康管理",
   "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
     {
       "src": "favicon.ico",
       "sizes": "64x64",
@@ -11,5 +17,5 @@
   "start_url": ".",
   "display": "standalone",
   "theme_color": "#639922",
-  "background_color": "#ffffff"
+  "background_color": "#639922"
 }
