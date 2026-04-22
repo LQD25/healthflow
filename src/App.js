@@ -543,7 +543,7 @@ export default function App() {
   const [dietSub, setDietSub] = useState("record");
   const [selectedRecipe, setSelectedRecipe] = useState(null);
   const [statsTab, setStatsTab] = useState("cal"); 
-  {/* 舞蹈相关*/}
+ 
   //const [danceTab, setDanceTab] = useState("today");
   const [danceTasks, setDanceTasks] = useState([]);
   const [danceCheckins, setDanceCheckins] = useState([]);
@@ -553,7 +553,7 @@ export default function App() {
   const [danceRole, setDanceRole] = useState("daughter");
   const [totalDancePoints, setTotalDancePoints] = useState(0);
   const [pastTasks, setPastTasks] = useState([]);
-  {/* 社交相关*/}
+ 
   const [socialTab, setSocialTab] = useState("friends");
   const [friends, setFriends] = useState([]);
   const [messages, setMessages] = useState([]);
@@ -598,7 +598,7 @@ export default function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  {/* 舞蹈任务相关函数 */}
+  
 useEffect(() => {
   if (!user || tab !== "dance") return;
 
@@ -606,7 +606,7 @@ useEffect(() => {
   loadDanceHistory();
 }, [user, tab, loadDanceTasks, loadDanceHistory]);
 
-{/* 实时消息订阅 */}
+
 useEffect(() => {
   if (!user) return;
   const sub = supabase.channel('messages')
@@ -659,7 +659,7 @@ useEffect(() => {
   loadAll();
 }, [user, initialized]);
 
-{/* 社交相关函数 */}
+
 async function loadProfile() {
   const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();
   if (data) setProfile(data);
@@ -731,7 +731,7 @@ function getFriendInfo(f) {
   return { friendId: f.friendId, nickname: f.nickname, avatar_emoji: f.avatar_emoji };
 }
 
-{/* 舞蹈相关函数 */}
+
 async function loadDanceTasks() {
   const today = new Date().toISOString().split('T')[0];
   const { data } = await supabase.from('dance_tasks').select('*').eq('task_date', today).order('created_at');
@@ -793,7 +793,7 @@ async function deleteDanceTask(id) {
   setDanceTasks(prev => prev.filter(t => t.id !== id));
 }
 
-{/* 饮食运动相关函数 */}
+
   async function addFood(f) {
     const { data } = await supabase.from('food_logs').insert([{ name: f.name, cal: f.cal, meal: '加餐', user_id: user.id }]).select();
     if (data) setFoodLog(prev => [...prev, ...data]);
