@@ -466,6 +466,20 @@ function ProfileTab({ user, onSignOut }) {
         </div>
       )}
 
+{bmi && height && (
+  <div style={{ background: G.blue.bg, borderRadius: 12, padding: "14px 16px", marginBottom: 14, border: `1px solid ${G.blue.light}` }}>
+    <div style={{ fontSize: 13, fontWeight: 500, color: G.blue.dark, marginBottom: 8 }}>健康体重范围</div>
+    <div style={{ fontSize: 13, color: G.blue.dark }}>
+      根据你的身高 <span style={{ fontWeight: 500 }}>{height}cm</span>，健康体重应在：
+    </div>
+    <div style={{ fontWeight: 500, fontSize: 22, color: G.blue.dark, margin: "8px 0" }}>
+      {(18.5 * Math.pow(parseFloat(height) / 100, 2)).toFixed(1)} kg
+      <span style={{ fontSize: 14, fontWeight: 400 }}> ~ </span>
+      {(24 * Math.pow(parseFloat(height) / 100, 2)).toFixed(1)} kg
+    </div>
+    <div style={{ fontSize: 11, color: G.blue.mid }}>BMI 18.5 ~ 24 为健康范围</div>
+  </div>
+)}
       {tdee && (
         <div style={{ background: G.teal.bg, borderRadius: 12, padding: "14px 16px", marginBottom: 14, border: `1px solid ${G.teal.light}` }}>
           <div style={{ fontSize: 13, fontWeight: 500, color: G.teal.dark, marginBottom: 4 }}>每日消耗估算（TDEE）</div>
@@ -473,6 +487,31 @@ function ProfileTab({ user, onSignOut }) {
           <div style={{ fontSize: 12, color: G.teal.mid, marginTop: 4 }}>基于身高体重年龄，适度活动量估算</div>
         </div>
       )}
+
+      <div style={{ background: G.teal.bg, borderRadius: 12, padding: "14px 16px", marginBottom: 14, border: `1px solid ${G.teal.light}` }}>
+  <div style={{ fontSize: 13, fontWeight: 500, color: G.teal.dark, marginBottom: 10 }}>目标体重设定</div>
+  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+    <input
+      type="number"
+      defaultValue={localStorage.getItem("hf_target_weight") || ""}
+      id="targetWeightInput"
+      placeholder="输入目标体重 (kg)"
+      style={{ flex: 1, padding: "8px 12px", borderRadius: 8, border: `0.5px solid ${G.teal.light}`, fontSize: 14, outline: "none" }}
+    />
+    <span style={{ fontSize: 12, color: G.teal.mid }}>kg</span>
+    <button onClick={() => {
+      const val = document.getElementById("targetWeightInput").value.trim();
+      if (!val) return;
+      localStorage.setItem("hf_target_weight", val);
+      alert("目标体重已保存！");
+    }} style={{ background: G.teal.mid, color: "#fff", border: "none", borderRadius: 8, padding: "8px 12px", fontSize: 12, cursor: "pointer" }}>保存</button>
+  </div>
+  {height && (
+    <div style={{ fontSize: 11, color: G.teal.mid, marginTop: 6 }}>
+      建议范围：{(18.5 * Math.pow(parseFloat(height) / 100, 2)).toFixed(1)} ~ {(24 * Math.pow(parseFloat(height) / 100, 2)).toFixed(1)} kg
+    </div>
+  )}
+</div>
 
       <div style={{ background: G.amber.bg, borderRadius: 12, padding: "14px 16px", marginBottom: 14, border: `1px solid ${G.amber.light}` }}>
         <div style={{ fontSize: 13, fontWeight: 500, color: G.amber.dark, marginBottom: 8 }}>每日热量目标</div>
@@ -572,18 +611,18 @@ useEffect(() => {
     if (e.data && e.data.length) {
       setExercises(e.data);
     } else {
-      const def = DEFAULT_EXERCISES.map(ex => ({
-        ...ex,
-        user_id: uid,
-        created_at: today
-      }));
-
-      const { data } = await supabase
+      const { data: check } = await supabase
         .from('exercise_logs')
-        .insert(def)
-        .select();
-
-      if (data) setExercises(data);
+        .select('id')
+        .eq('user_id', uid)
+        .eq('created_at', today);
+      if (!check || check.length === 0) {
+        const def = DEFAULT_EXERCISES.map(ex => ({
+          ...ex, user_id: uid, created_at: today
+        }));
+        const { data } = await supabase.from('exercise_logs').insert(def).select();
+        if (data) setExercises(data);
+      }
     }
 
     setInitialized(true); // ✅ 防止重复执行
@@ -973,7 +1012,11 @@ async function addExercise() {
             <div style={{ background: G.teal.bg, borderRadius: 12, padding: "14px 16px", marginBottom: 14, border: `1px solid ${G.teal.light}` }}>
               <div style={{ fontSize: 13, color: G.teal.mid, marginBottom: 4 }}>当前体重</div>
               <div style={{ fontWeight: 500, fontSize: 32, color: G.teal.dark }}>{curW} <span style={{ fontSize: 16 }}>kg</span></div>
-              <div style={{ fontSize: 12, color: G.teal.mid }}>目标体重 70.0 kg</div>
+              <div style={{ fontSize: 12, color: G.teal.mid }}>
+  目标体重 {localStorage.getItem("hf_target_weight") || "未设定"} kg
+  {localStorage.getItem("hf_target_weight") && weights.length ? 
+    ` · 还差 ${(parseFloat(curW) - parseFloat(localStorage.getItem("hf_target_weight"))).toFixed(1)} kg` : ""}
+</div>
             </div>
             <div style={{ background: "#fff", borderRadius: 12, padding: "12px 14px", marginBottom: 14, border: `0.5px solid ${G.teal.light}` }}>
               <div style={{ fontSize: 13, fontWeight: 500, color: G.gray.dark, marginBottom: 8 }}>体重趋势</div>
@@ -1240,7 +1283,7 @@ async function addExercise() {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
           {[
             { label: "当前体重", val: `${curW}kg`, color: G.teal },
-            { label: "距目标", val: weights.length ? `${(parseFloat(curW) - 70).toFixed(1)}kg` : "--", color: G.green },
+            { label: "距目标", val: localStorage.getItem("hf_target_weight") && weights.length ? `${(parseFloat(curW) - parseFloat(localStorage.getItem("hf_target_weight"))).toFixed(1)}kg` : "--", color: G.green },
           ].map(c => (
             <div key={c.label} style={{ background: c.color.bg, borderRadius: 12, padding: "14px", border: `1px solid ${c.color.light}`, textAlign: "center" }}>
               <div style={{ fontSize: 11, color: c.color.mid, marginBottom: 4 }}>{c.label}</div>
