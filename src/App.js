@@ -319,7 +319,7 @@ function RecipeDetail({ r, onBack, staple, onAdd }) {
   );
 }
 
-{/*登录/注册界面*/}
+
 function AuthScreen({ onAuth }) {
   const [mode, setMode] = useState("login");
   const [email, setEmail] = useState("");
@@ -601,11 +601,25 @@ export default function App() {
   
 useEffect(() => {
   if (!user || tab !== "dance") return;
-
-  loadDanceTasks();
-  loadDanceHistory();
-}, [user, tab, loadDanceTasks, loadDanceHistory]);
-
+  const today = new Date().toISOString().split('T')[0];
+  const run = async () => {
+    const { data } = await supabase.from('dance_tasks').select('*').eq('task_date', today).order('created_at');
+    if (data) setDanceTasks(data);
+    const { data: checkins } = await supabase.from('dance_checkins').select('*').eq('user_id', user.id).eq('task_date', today);
+    if (checkins) setDanceCheckins(checkins);
+    const { data: points } = await supabase.from('dance_points').select('points').eq('user_id', user.id);
+    if (points) setTotalDancePoints(points.reduce((s, p) => s + p.points, 0));
+    const { data: past } = await supabase.from('dance_tasks').select('name').order('created_at', { ascending: false });
+    if (past) setPastTasks([...new Set(past.map(t => t.name))].slice(0, 10));
+    const { data: hist } = await supabase.from('dance_checkins').select('task_date, task_id').eq('user_id', user.id).order('task_date', { ascending: false });
+    if (hist) {
+      const byDate = {};
+      hist.forEach(c => { if (!byDate[c.task_date]) byDate[c.task_date] = 0; byDate[c.task_date]++; });
+      setDanceHistory(Object.entries(byDate).slice(0, 7).map(([date, count]) => ({ date, count })));
+    }
+  };
+  run();
+}, [user, tab]); // eslint-disable-line react-hooks/exhaustive-deps
 
 useEffect(() => {
   if (!user) return;
@@ -652,7 +666,7 @@ useEffect(() => {
       }
     }
 
-    setInitialized(true); {/* ✅ 防止重复执行 */}
+    setInitialized(true); 
     setLoading(false);
   };
 
