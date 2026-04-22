@@ -345,7 +345,7 @@ function AuthScreen({ onAuth }) {
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24, background: G.green.bg }}>
       <div style={{ fontSize: 48, marginBottom: 8 }}>🌿</div>
-      <div style={{ fontWeight: 500, fontSize: 24, color: G.green.dark, marginBottom: 4 }}>HealthFlow</div>
+      <div style={{ fontWeight: 500, fontSize: 24, color: G.green.dark, marginBottom: 4 }}>FamilyFit</div>
       <div style={{ fontSize: 13, color: G.green.mid, marginBottom: 32 }}>你的健康管理助手</div>
 
       <div style={{ width: "100%", maxWidth: 360, background: "#fff", borderRadius: 20, padding: 24, border: `1px solid ${G.green.light}` }}>
