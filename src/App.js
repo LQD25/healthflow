@@ -319,7 +319,7 @@ function RecipeDetail({ r, onBack, staple, onAdd }) {
   );
 }
 
-// 登录/注册界面
+{/*登录/注册界面*/}
 function AuthScreen({ onAuth }) {
   const [mode, setMode] = useState("login");
   const [email, setEmail] = useState("");
@@ -345,8 +345,8 @@ function AuthScreen({ onAuth }) {
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24, background: G.green.bg }}>
       <div style={{ fontSize: 48, marginBottom: 8 }}>🌿</div>
-      <div style={{ fontWeight: 500, fontSize: 24, color: G.green.dark, marginBottom: 4 }}>FamilyFit</div>
-      <div style={{ fontSize: 13, color: G.green.mid, marginBottom: 32 }}>你的健康管理助手</div>
+      <div style={{ fontWeight: 500, fontSize: 24, color: G.green.dark, marginBottom: 4 }}> FamilyFit </div>
+      <div style={{ fontSize: 13, color: G.green.mid, marginBottom: 32 }}> 家用健康小软件 </div>
 
       <div style={{ width: "100%", maxWidth: 360, background: "#fff", borderRadius: 20, padding: 24, border: `1px solid ${G.green.light}` }}>
         <div style={{ display: "flex", marginBottom: 20, background: G.green.bg, borderRadius: 12, padding: 4 }}>
@@ -542,9 +542,9 @@ export default function App() {
   const [tab, setTab] = useState("home");
   const [dietSub, setDietSub] = useState("record");
   const [selectedRecipe, setSelectedRecipe] = useState(null);
-  const [statsTab, setStatsTab] = useState("cal");
-// 舞蹈相关
-  const [danceTab, setDanceTab] = useState("today");
+  const [statsTab, setStatsTab] = useState("cal"); 
+  {/* 舞蹈相关*/}
+  //const [danceTab, setDanceTab] = useState("today");
   const [danceTasks, setDanceTasks] = useState([]);
   const [danceCheckins, setDanceCheckins] = useState([]);
   const [danceHistory, setDanceHistory] = useState([]);
@@ -553,7 +553,7 @@ export default function App() {
   const [danceRole, setDanceRole] = useState("daughter");
   const [totalDancePoints, setTotalDancePoints] = useState(0);
   const [pastTasks, setPastTasks] = useState([]);
-// 社交相关
+  {/* 社交相关*/}
   const [socialTab, setSocialTab] = useState("friends");
   const [friends, setFriends] = useState([]);
   const [messages, setMessages] = useState([]);
@@ -598,11 +598,15 @@ export default function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // 舞蹈任务相关函数
-useEffect(() => { if (user && tab === "dance") { loadDanceTasks(); loadDanceHistory(); } }, [user, tab]);
-  
+  {/* 舞蹈任务相关函数 */}
+useEffect(() => {
+  if (!user || tab !== "dance") return;
 
-// 实时消息订阅
+  loadDanceTasks();
+  loadDanceHistory();
+}, [user, tab, loadDanceTasks, loadDanceHistory]);
+
+{/* 实时消息订阅 */}
 useEffect(() => {
   if (!user) return;
   const sub = supabase.channel('messages')
@@ -648,14 +652,14 @@ useEffect(() => {
       }
     }
 
-    setInitialized(true); // ✅ 防止重复执行
+    setInitialized(true); {/* ✅ 防止重复执行 */}
     setLoading(false);
   };
 
   loadAll();
 }, [user, initialized]);
 
-// 社交相关函数
+{/* 社交相关函数 */}
 async function loadProfile() {
   const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();
   if (data) setProfile(data);
@@ -727,7 +731,7 @@ function getFriendInfo(f) {
   return { friendId: f.friendId, nickname: f.nickname, avatar_emoji: f.avatar_emoji };
 }
 
-// 舞蹈相关函数
+{/* 舞蹈相关函数 */}
 async function loadDanceTasks() {
   const today = new Date().toISOString().split('T')[0];
   const { data } = await supabase.from('dance_tasks').select('*').eq('task_date', today).order('created_at');
@@ -789,7 +793,7 @@ async function deleteDanceTask(id) {
   setDanceTasks(prev => prev.filter(t => t.id !== id));
 }
 
-// 饮食运动相关函数
+{/* 饮食运动相关函数 */}
   async function addFood(f) {
     const { data } = await supabase.from('food_logs').insert([{ name: f.name, cal: f.cal, meal: '加餐', user_id: user.id }]).select();
     if (data) setFoodLog(prev => [...prev, ...data]);
@@ -1219,7 +1223,7 @@ async function addExercise() {
             </div>
           </div>
         )}
-// 舞蹈打卡
+
 {tab === "dance" && (
   <div>
     {/* 角色标题 */}
@@ -1364,7 +1368,7 @@ async function addExercise() {
   </div>
 )}
 
-// 社交模块
+
         {tab === "social" && (
   <div>
     {/* 子标签 */}
