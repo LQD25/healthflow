@@ -409,6 +409,22 @@ function ProfileTab({ user, onSignOut }) {
       <div style={{ background: G.green.bg, borderRadius: 12, padding: "14px 16px", marginBottom: 14, border: `1px solid ${G.green.light}` }}>
         <div style={{ fontSize: 13, color: G.green.mid, marginBottom: 2 }}>当前账号</div>
         <div style={{ fontWeight: 500, fontSize: 14, color: G.green.dark }}>{user.email}</div>
+        <div style={{ fontSize: 11, color: G.green.mid, marginTop: 6, marginBottom: 4 }}>我的昵称</div>
+<div style={{ display: "flex", gap: 8 }}>
+  <input
+    id="nicknameInput"
+    defaultValue={localStorage.getItem("hf_nickname") || user.email.split('@')[0]}
+    placeholder="设置昵称"
+    style={{ flex: 1, padding: "6px 10px", borderRadius: 8, border: `0.5px solid ${G.green.light}`, fontSize: 13, outline: "none" }}
+  />
+  <button onClick={async () => {
+    const val = document.getElementById("nicknameInput").value.trim();
+    if (!val) return;
+    await supabase.from('profiles').upsert({ id: user.id, nickname: val });
+    localStorage.setItem("hf_nickname", val);
+    alert("昵称已更新！");
+  }} style={{ background: G.green.mid, color: "#fff", border: "none", borderRadius: 8, padding: "6px 12px", fontSize: 12, cursor: "pointer" }}>保存</button>
+</div>
         <button onClick={onSignOut} style={{ marginTop: 8, background: "none", border: `0.5px solid ${G.red.mid}`, borderRadius: 20, padding: "4px 14px", color: G.red.mid, fontSize: 12, cursor: "pointer" }}>退出登录</button>
       </div>
 
@@ -486,6 +502,15 @@ export default function App() {
   const [dietSub, setDietSub] = useState("record");
   const [selectedRecipe, setSelectedRecipe] = useState(null);
   const [statsTab, setStatsTab] = useState("cal");
+// 社交相关
+  const [socialTab, setSocialTab] = useState("friends");
+  const [friends, setFriends] = useState([]);
+  const [messages, setMessages] = useState([]);
+  const [activeFriend, setActiveFriend] = useState(null);
+  const [msgInput, setMsgInput] = useState("");
+  const [searchEmail, setSearchEmail] = useState("");
+  const [profile, setProfile] = useState(null);
+
   const [foodLog, setFoodLog] = useState([]);
   const [weights, setWeights] = useState([]);
   const [exercises, setExercises] = useState([]);
@@ -513,6 +538,19 @@ export default function App() {
     });
     return () => subscription.unsubscribe();
   }, []);
+
+
+  // 实时消息订阅
+useEffect(() => {
+  if (!user) return;
+  const sub = supabase.channel('messages')
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
+      if (payload.new.receiver_id === user.id || payload.new.sender_id === user.id) {
+        setMessages(prev => [...prev, payload.new]);
+      }
+    }).subscribe();
+  return () => supabase.removeChannel(sub);
+}, [user]);
 
 useEffect(() => {
   if (!user || initialized) return;
@@ -554,6 +592,78 @@ useEffect(() => {
 
   loadAll();
 }, [user, initialized]);
+
+// 社交相关函数
+async function loadProfile() {
+  const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+  if (data) setProfile(data);
+  else {
+    const { data: newP } = await supabase.from('profiles').insert([{ id: user.id, nickname: user.email.split('@')[0] }]).select().single();
+    if (newP) setProfile(newP);
+  }
+}
+
+async function loadFriends() {
+  const { data } = await supabase.from('friendships')
+    .select('*')
+    .eq('user_id', user.id)
+    .eq('status', 'accepted');
+  if (!data || !data.length) { setFriends([]); return; }
+
+  const friendIds = data.map(f => f.friend_id);
+  const { data: profilesData } = await supabase.from('profiles')
+    .select('id, nickname, avatar_emoji')
+    .in('id', friendIds);
+
+  const merged = data.map(f => {
+    const profile = profilesData?.find(p => p.id === f.friend_id);
+    return { ...f, friendId: f.friend_id, nickname: profile?.nickname, avatar_emoji: profile?.avatar_emoji };
+  });
+  setFriends(merged);
+}
+
+async function searchAndAddFriend() {
+  if (!searchEmail.trim()) return;
+  const { data: target } = await supabase.from('profiles')
+    .select('id, nickname')
+    .eq('nickname', searchEmail.trim())
+    .single();
+  if (!target) { alert('找不到该用户，请检查昵称'); return; }
+  if (target.id === user.id) { alert('不能添加自己'); return; }
+
+  const { data: existing } = await supabase.from('friendships')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('friend_id', target.id)
+    .single();
+  if (existing) { alert('已经是好友了'); return; }
+
+  await supabase.from('friendships').insert([
+    { user_id: user.id, friend_id: target.id, status: 'accepted' },
+    { user_id: target.id, friend_id: user.id, status: 'accepted' },
+  ]);
+  setSearchEmail("");
+  loadFriends();
+}
+
+async function loadMessages(friendId) {
+  const { data } = await supabase.from('messages')
+    .select('*')
+    .or(`and(sender_id.eq.${user.id},receiver_id.eq.${friendId}),and(sender_id.eq.${friendId},receiver_id.eq.${user.id})`)
+    .order('created_at');
+  if (data) setMessages(data);
+}
+
+async function sendMessage() {
+  if (!msgInput.trim() || !activeFriend) return;
+  await supabase.from('messages').insert([{ sender_id: user.id, receiver_id: activeFriend.friendId, content: msgInput.trim() }]);
+  setMsgInput("");
+  
+}
+
+function getFriendInfo(f) {
+  return { friendId: f.friendId, nickname: f.nickname, avatar_emoji: f.avatar_emoji };
+}
 
   async function addFood(f) {
     const { data } = await supabase.from('food_logs').insert([{ name: f.name, cal: f.cal, meal: '加餐', user_id: user.id }]).select();
@@ -649,7 +759,7 @@ async function addExercise() {
     { id: "diet", icon: "🥗", label: "饮食" },
     { id: "weight", icon: "⚖️", label: "体重" },
     { id: "exercise", icon: "🏃", label: "运动" },
-  
+    { id: "social", icon: "👥", label: "社交" },
     { id: "profile", icon: "👤", label: "我的" },
     { id: "stats", icon: "📊", label: "统计" },
   ];
@@ -979,6 +1089,98 @@ async function addExercise() {
             </div>
           </div>
         )}
+
+        {tab === "social" && (
+  <div>
+    {/* 子标签 */}
+    <div style={{ display: "flex", gap: 6, marginBottom: 14, background: G.gray.bg, borderRadius: 12, padding: 4 }}>
+      {[["friends", "👥 好友"], ["chat", "💬 聊天"]].map(([id, label]) => (
+        <button key={id} onClick={() => setSocialTab(id)} style={{ flex: 1, padding: "7px 0", borderRadius: 9, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 500, background: socialTab === id ? "#fff" : "transparent", color: socialTab === id ? G.green.dark : G.gray.mid }}>
+          {label}
+        </button>
+      ))}
+    </div>
+
+    {socialTab === "friends" && (
+      <div>
+        {/* 我的资料 */}
+        {profile && (
+          <div style={{ background: G.green.bg, borderRadius: 12, padding: "12px 14px", marginBottom: 14, border: `1px solid ${G.green.light}`, display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{ width: 44, height: 44, borderRadius: 22, background: G.green.light, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24 }}>{profile.avatar_emoji}</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 500, fontSize: 15, color: G.green.dark }}>{profile.nickname}</div>
+              <div style={{ fontSize: 11, color: G.green.mid }}>我的昵称（好友搜索用）</div>
+            </div>
+          </div>
+        )}
+
+        {/* 搜索添加好友 */}
+        <div style={{ background: "#fff", borderRadius: 12, padding: "12px 14px", marginBottom: 14, border: `0.5px solid ${G.gray.light}` }}>
+          <div style={{ fontSize: 13, fontWeight: 500, color: G.gray.dark, marginBottom: 8 }}>添加好友</div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <input value={searchEmail} onChange={e => setSearchEmail(e.target.value)} placeholder="输入对方昵称..." style={{ flex: 1, padding: "8px 12px", borderRadius: 20, border: `0.5px solid ${G.green.light}`, fontSize: 13, outline: "none" }} onKeyDown={e => e.key === "Enter" && searchAndAddFriend()} />
+            <button onClick={searchAndAddFriend} style={{ background: G.green.mid, color: "#fff", border: "none", borderRadius: 20, padding: "8px 14px", cursor: "pointer", fontSize: 13 }}>添加</button>
+          </div>
+        </div>
+
+        {/* 好友列表 */}
+        <div style={{ fontSize: 13, fontWeight: 500, color: G.gray.dark, marginBottom: 8 }}>好友列表 ({friends.length})</div>
+        {friends.length === 0 && (
+          <div style={{ textAlign: "center", color: G.gray.mid, fontSize: 13, padding: 30 }}>还没有好友，搜索昵称添加吧 👋</div>
+        )}
+        {friends.map((f, i) => {
+          const info = getFriendInfo(f);
+          return (
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, background: "#fff", borderRadius: 12, padding: "12px 14px", marginBottom: 8, border: `0.5px solid ${G.gray.light}` }}>
+              <div style={{ width: 40, height: 40, borderRadius: 20, background: G.teal.bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>{info.avatar_emoji || "🙂"}</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 500, fontSize: 14, color: G.gray.dark }}>{info.nickname || "用户"}</div>
+              </div>
+              <button onClick={() => { setActiveFriend(info); setSocialTab("chat"); loadMessages(info.friendId); }} style={{ background: G.teal.bg, color: G.teal.dark, border: `0.5px solid ${G.teal.light}`, borderRadius: 16, padding: "6px 12px", fontSize: 12, cursor: "pointer" }}>发消息</button>
+            </div>
+          );
+        })}
+      </div>
+    )}
+
+    {socialTab === "chat" && (
+      <div>
+        {!activeFriend ? (
+          <div style={{ textAlign: "center", color: G.gray.mid, fontSize: 13, padding: 40 }}>请先在好友列表选择好友发消息</div>
+        ) : (
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14, background: G.teal.bg, borderRadius: 12, padding: "10px 14px", border: `1px solid ${G.teal.light}` }}>
+              <div style={{ fontSize: 22 }}>{activeFriend.avatar_emoji || "🙂"}</div>
+              <div style={{ fontWeight: 500, fontSize: 14, color: G.teal.dark }}>{activeFriend.nickname || "好友"}</div>
+              <button onClick={() => setActiveFriend(null)} style={{ marginLeft: "auto", background: "none", border: "none", color: G.gray.mid, fontSize: 18, cursor: "pointer" }}>×</button>
+            </div>
+
+            {/* 消息列表 */}
+            <div style={{ minHeight: 300, maxHeight: 380, overflowY: "auto", display: "flex", flexDirection: "column", gap: 8, marginBottom: 12 }}>
+              {messages.length === 0 && (
+                <div style={{ textAlign: "center", color: G.gray.mid, fontSize: 13, padding: 30 }}>还没有消息，说点什么吧 👋</div>
+              )}
+              {messages.map((m, i) => (
+                <div key={i} style={{ display: "flex", justifyContent: m.sender_id === user.id ? "flex-end" : "flex-start" }}>
+                  <div style={{ maxWidth: "75%", background: m.sender_id === user.id ? G.green.mid : "#fff", color: m.sender_id === user.id ? "#fff" : G.gray.dark, borderRadius: m.sender_id === user.id ? "16px 16px 4px 16px" : "16px 16px 16px 4px", padding: "10px 14px", fontSize: 14, lineHeight: 1.5, border: m.sender_id !== user.id ? `0.5px solid ${G.gray.light}` : "none" }}>
+                    <div>{m.content}</div>
+                    <div style={{ fontSize: 10, opacity: 0.6, marginTop: 4, textAlign: "right" }}>{new Date(m.created_at).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* 输入框 */}
+            <div style={{ display: "flex", gap: 8 }}>
+              <input value={msgInput} onChange={e => setMsgInput(e.target.value)} onKeyDown={e => e.key === "Enter" && sendMessage()} placeholder="输入消息..." style={{ flex: 1, padding: "10px 14px", borderRadius: 22, border: `0.5px solid ${G.green.light}`, fontSize: 14, outline: "none" }} />
+              <button onClick={sendMessage} style={{ background: G.green.mid, color: "#fff", border: "none", borderRadius: 22, padding: "0 18px", cursor: "pointer", fontSize: 14, fontWeight: 500 }}>发送</button>
+            </div>
+          </div>
+        )}
+      </div>
+    )}
+  </div>
+)}
         {tab === "stats" && (
   <div>
     {/* 子标签 */}
@@ -1062,7 +1264,7 @@ async function addExercise() {
 
       <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 420, background: "#fff", borderTop: `0.5px solid ${G.gray.light}`, display: "flex", zIndex: 100 }}>
         {tabs.map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)} style={{ flex: 1, padding: "10px 0 8px", border: "none", background: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+          <button key={t.id} onClick={() => { setTab(t.id); if (t.id === "social") { loadFriends(); loadProfile(); } }} style={{ flex: 1, padding: "10px 0 8px", border: "none", background: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
             <span style={{ fontSize: 16 }}>{t.icon}</span>
             <span style={{ fontSize: 9, color: tab === t.id ? G.green.mid : G.gray.mid, fontWeight: tab === t.id ? 500 : 400 }}>{t.label}</span>
           </button>
