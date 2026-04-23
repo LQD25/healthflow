@@ -839,7 +839,7 @@ function getFriendInfo(f) {
 }
 
 
-async function toggleDanceTask(task) {
+/* async function toggleDanceTask(task) {
   const today = new Date().toISOString().split('T')[0];
   const existing = danceCheckins.find(c => c.task_id === task.id);
   if (existing) {
@@ -854,7 +854,7 @@ async function toggleDanceTask(task) {
       setTotalDancePoints(prev => prev + task.points);
     }
   }
-}
+}*/
 
 
 async function deleteDanceTask(id) {
@@ -1538,7 +1538,7 @@ async function addExercise() {
               created_by: user.id, task_date: today,
               assigned_to: t.assigned_to || null
             }));
-            const { data, error } = await supabase.from('dance_tasks').insert(inserts).select();
+            const { data } = await supabase.from('dance_tasks').insert(inserts).select();
            
             if (data && data.length > 0) {
               setDanceTasks(prev => [...prev, ...data]);
