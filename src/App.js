@@ -684,8 +684,7 @@ useEffect(() => {
     if (checkins) setDanceCheckins(checkins);
     const { data: points } = await supabase.from('dance_points').select('points').eq('user_id', user.id);
     if (points) setTotalDancePoints(points.reduce((s, p) => s + p.points, 0));
-    const { data: past } = await supabase.from('dance_tasks').select('name').order('created_at', { ascending: false });
-   
+
     const { data: hist } = await supabase.from('dance_checkins').select('task_date, task_id').eq('user_id', user.id).order('task_date', { ascending: false });
     if (hist) {
       const byDate = {};
