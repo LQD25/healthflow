@@ -616,11 +616,14 @@ export default function App() {
   const [danceCheckins, setDanceCheckins] = useState([]);
   const [danceHistory, setDanceHistory] = useState([]);
   const [showAddDance, setShowAddDance] = useState(false);
-  const [newDanceTask, setNewDanceTask] = useState({ name: "", reps: "", points: 10 });
+  const [newDanceTask, setNewDanceTask] = useState({ name: "", repsType: "reps", repsValue: "", reps: "", points: 10, assigned_to: null });
+  const [draftTasks, setDraftTasks] = useState([]);
+  const [draftTarget, setDraftTarget] = useState(null);
   const [danceRole, setDanceRole] = useState("daughter");
   const [totalDancePoints, setTotalDancePoints] = useState(0);
   const [pastTasks, setPastTasks] = useState([]);
   const [daughters, setDaughters] = useState([]);
+  const [expandedGroup, setExpandedGroup] = useState(null);
  
   const [socialTab, setSocialTab] = useState("friends");
   const [friends, setFriends] = useState([]);
@@ -671,9 +674,11 @@ useEffect(() => {
   if (!user || tab !== "dance") return;
   const today = new Date().toISOString().split('T')[0];
   const run = async () => {
-    const { data } = await supabase.from('dance_tasks').select('*').eq('task_date', today)
-  .or(`assigned_to.eq.${user.id},assigned_to.is.null`)
-  .order('created_at');
+  const taskQuery = supabase.from('dance_tasks').select('*').eq('task_date', today).order('created_at');
+  const { data } = profile?.role === 'mom' || profile?.role === 'admin'
+  ? await taskQuery
+  : await taskQuery.or(`assigned_to.eq.${user.id},assigned_to.is.null`);
+
     if (data) setDanceTasks(data);
     const { data: checkins } = await supabase.from('dance_checkins').select('*').eq('user_id', user.id).eq('task_date', today);
     if (checkins) setDanceCheckins(checkins);
@@ -851,19 +856,6 @@ async function toggleDanceTask(task) {
   }
 }
 
-async function addDanceTask() {
-  if (!newDanceTask.name || !newDanceTask.reps) return;
-  const today = new Date().toISOString().split('T')[0];
-  const { data } = await supabase.from('dance_tasks').insert([{
-  name: newDanceTask.name, reps: newDanceTask.reps,
-  points: parseInt(newDanceTask.points) || 10,
-  created_by: user.id, task_date: today,
-  assigned_to: newDanceTask.assigned_to || null
-}]).select();
-  if (data) setDanceTasks(prev => [...prev, ...data]);
-  setNewDanceTask({ name: "", reps: "", points: 10 });
-  setShowAddDance(false);
-}
 
 async function deleteDanceTask(id) {
   await supabase.from('dance_tasks').delete().eq('id', id);
@@ -1339,28 +1331,69 @@ async function addExercise() {
           </div>
         )}
 
-        {/* 任务列表 */}
-        <div style={{ fontSize: 13, fontWeight: 500, color: G.gray.dark, marginBottom: 8 }}>今日训练任务</div>
-        {danceTasks.length === 0 && (
-          <div style={{ textAlign: "center", color: G.gray.mid, fontSize: 13, padding: 30 }}>今日还没有训练任务，等妈妈发布 💃</div>
-        )}
-        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 }}>
-          {danceTasks.map(t => {
-            const done = danceCheckins.some(c => c.task_id === t.id);
-            return (
-              <div key={t.id} onClick={() => toggleDanceTask(t)} style={{ display: "flex", alignItems: "center", gap: 12, background: done ? G.pink.bg : "#fff", borderRadius: 12, padding: "12px 14px", cursor: "pointer", border: `1px solid ${done ? G.pink.light : G.gray.light}` }}>
-                <div style={{ width: 24, height: 24, borderRadius: 12, border: `2px solid ${done ? G.pink.mid : G.gray.light}`, background: done ? G.pink.mid : "transparent", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, color: "#fff", flexShrink: 0 }}>
-                  {done ? "✓" : ""}
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 500, fontSize: 14, color: done ? G.pink.dark : G.gray.dark }}>{t.name}</div>
-                  <div style={{ fontSize: 12, color: G.gray.mid }}>{t.reps}</div>
-                </div>
-                <div style={{ background: G.amber.bg, borderRadius: 12, padding: "3px 8px", fontSize: 11, color: G.amber.dark, fontWeight: 500 }}>+{t.points}分</div>
-              </div>
-            );
-          })}
+{danceTasks.length === 0 && (
+  <div style={{ textAlign: "center", color: G.gray.mid, fontSize: 13, padding: 30 }}>还没有今日任务，点击添加 👆</div>
+)}
+
+{(() => {
+  const groups = {};
+  danceTasks.forEach(t => {
+    const key = t.assigned_to || "all";
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(t);
+  });
+
+  return Object.entries(groups).map(([key, tasks]) => {
+    const daughter = key === "all" ? null : daughters.find(d => d.id === key);
+    const doneCount = tasks.filter(t => danceCheckins.some(c => c.task_id === t.id)).length;
+    const totalPoints = tasks.reduce((s, t) => s + t.points, 0);
+    const expanded = expandedGroup === key;
+
+    return (
+      <div key={key} style={{ marginBottom: 8 }}>
+        {/* 折叠标题 */}
+        <div onClick={() => setExpandedGroup(expanded ? null : key)}
+          style={{ display: "flex", alignItems: "center", gap: 8, background: daughter ? G.pink.bg : G.teal.bg, borderRadius: expanded ? "12px 12px 0 0" : 12, padding: "10px 14px", border: `1px solid ${daughter ? G.pink.light : G.teal.light}`, borderBottom: expanded ? "none" : undefined, cursor: "pointer" }}>
+          <span style={{ fontSize: 18 }}>👧</span>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 500, fontSize: 13, color: daughter ? G.pink.dark : G.teal.dark }}>
+              {daughter ? daughter.nickname : "全部女儿"}
+            </div>
+            <div style={{ fontSize: 11, color: daughter ? G.pink.mid : G.teal.mid }}>
+              {tasks.length}个动作 · {totalPoints}积分 · 完成{doneCount}/{tasks.length}
+            </div>
+          </div>
+          <div style={{ width: 36, height: 36, borderRadius: 18, background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 500, color: doneCount === tasks.length ? G.green.mid : G.gray.mid, border: `2px solid ${doneCount === tasks.length ? G.green.mid : G.gray.light}` }}>
+            {Math.round(doneCount / tasks.length * 100)}%
+          </div>
+          <span style={{ fontSize: 12, color: G.gray.mid }}>{expanded ? "▲" : "▼"}</span>
         </div>
+
+        {/* 展开内容 */}
+        {expanded && (
+          <div style={{ border: `1px solid ${daughter ? G.pink.light : G.teal.light}`, borderRadius: "0 0 12px 12px", overflow: "hidden" }}>
+            {tasks.map((t, i) => {
+              const done = danceCheckins.some(c => c.task_id === t.id);
+              return (
+                <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 8, background: done ? G.green.bg : "#fff", padding: "8px 12px", borderBottom: i < tasks.length - 1 ? `0.5px solid ${G.gray.light}` : "none" }}>
+                  <div style={{ width: 18, height: 18, borderRadius: 9, background: done ? G.green.mid : G.gray.light, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: "#fff", flexShrink: 0 }}>
+                    {done ? "✓" : i + 1}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13, fontWeight: 500, color: done ? G.green.dark : G.gray.dark }}>{t.name}</div>
+                    <div style={{ fontSize: 11, color: G.gray.mid }}>{t.reps}</div>
+                  </div>
+                  <span style={{ fontSize: 11, background: G.amber.bg, color: G.amber.dark, padding: "2px 6px", borderRadius: 10 }}>+{t.points}</span>
+                  <button onClick={() => deleteDanceTask(t.id)} style={{ background: "none", border: "none", color: G.gray.light, fontSize: 14, cursor: "pointer" }}>×</button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  });
+})()}
 
         {/* 历史记录 */}
         {danceHistory.length > 0 && (
@@ -1383,114 +1416,209 @@ async function addExercise() {
     )}
 
     {/* 妈妈管理视图 */}
-    {danceRole === "mom" && (
-      <div>
-        {/* 添加任务 */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-          <div style={{ fontSize: 13, fontWeight: 500, color: G.gray.dark }}>今日训练任务管理</div>
-          <button onClick={() => setShowAddDance(!showAddDance)} style={{ background: G.teal.mid, color: "#fff", border: "none", borderRadius: 16, padding: "5px 12px", fontSize: 12, cursor: "pointer" }}>+ 添加</button>
+{danceRole === "mom" && (
+  <div>
+    {/* 添加任务按钮 */}
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+      <div style={{ fontSize: 13, fontWeight: 500, color: G.gray.dark }}>今日训练任务管理</div>
+      <button onClick={() => setShowAddDance(!showAddDance)} style={{ background: G.teal.mid, color: "#fff", border: "none", borderRadius: 16, padding: "5px 12px", fontSize: 12, cursor: "pointer" }}>+ 添加</button>
+    </div>
+
+    {/* 添加表单 */}
+    {showAddDance && (
+      <div style={{ background: G.teal.bg, borderRadius: 12, padding: 14, marginBottom: 12, border: `1px solid ${G.teal.light}` }}>
+        <div style={{ fontSize: 13, fontWeight: 500, color: G.teal.dark, marginBottom: 10 }}>📋 创建训练计划</div>
+
+        {/* 选择女儿 */}
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ fontSize: 11, color: G.gray.mid, marginBottom: 6 }}>分配给</div>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            <button onClick={() => setDraftTarget(null)}
+              style={{ padding: "6px 12px", borderRadius: 16, border: `0.5px solid ${!draftTarget ? G.teal.mid : G.gray.light}`, background: !draftTarget ? G.teal.mid : "#fff", color: !draftTarget ? "#fff" : G.gray.dark, fontSize: 12, cursor: "pointer" }}>
+              👧👧 全部女儿
+            </button>
+            {daughters.map(d => (
+              <button key={d.id} onClick={() => setDraftTarget(d.id)}
+                style={{ padding: "6px 12px", borderRadius: 16, border: `0.5px solid ${draftTarget === d.id ? G.pink.mid : G.gray.light}`, background: draftTarget === d.id ? G.pink.mid : "#fff", color: draftTarget === d.id ? "#fff" : G.gray.dark, fontSize: 12, cursor: "pointer" }}>
+                👧 {d.nickname}
+              </button>
+            ))}
+          </div>
         </div>
 
-        {showAddDance && (
-  <div style={{ background: G.teal.bg, borderRadius: 12, padding: 14, marginBottom: 12, border: `1px solid ${G.teal.light}` }}>
-    <div style={{ fontSize: 13, fontWeight: 500, color: G.teal.dark, marginBottom: 10 }}>添加训练动作</div>
-
-    {/* 选择女儿 */}
-    <div style={{ marginBottom: 10 }}>
-      <div style={{ fontSize: 11, color: G.gray.mid, marginBottom: 6 }}>分配给</div>
-      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-        <button onClick={() => setNewDanceTask({ ...newDanceTask, assigned_to: null })}
-          style={{ padding: "6px 12px", borderRadius: 16, border: `0.5px solid ${!newDanceTask.assigned_to ? G.teal.mid : G.gray.light}`, background: !newDanceTask.assigned_to ? G.teal.mid : "#fff", color: !newDanceTask.assigned_to ? "#fff" : G.gray.dark, fontSize: 12, cursor: "pointer" }}>
-          👧👧 全部女儿
-        </button>
-        {daughters.map(d => (
-          <button key={d.id} onClick={() => setNewDanceTask({ ...newDanceTask, assigned_to: d.id })}
-            style={{ padding: "6px 12px", borderRadius: 16, border: `0.5px solid ${newDanceTask.assigned_to === d.id ? G.pink.mid : G.gray.light}`, background: newDanceTask.assigned_to === d.id ? G.pink.mid : "#fff", color: newDanceTask.assigned_to === d.id ? "#fff" : G.gray.dark, fontSize: 12, cursor: "pointer" }}>
-            👧 {d.nickname}
-          </button>
-        ))}
-      </div>
-    </div>
-
-    {/* 动作名称 - 预设选择 */}
-    <div style={{ marginBottom: 8 }}>
-      <div style={{ fontSize: 11, color: G.gray.mid, marginBottom: 6 }}>选择动作</div>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
-        {[...new Set([
-          "压腿拉伸", "劈叉练习", "下腰训练", "踢腿练习",
-          "旋转基本功", "手位练习", "跳跃训练", "柔韧拉伸",
-          ...pastTasks
-        ])].map(name => (
-          <button key={name} onClick={() => setNewDanceTask({ ...newDanceTask, name })}
-            style={{ background: newDanceTask.name === name ? G.teal.mid : "#fff", border: `0.5px solid ${newDanceTask.name === name ? G.teal.mid : G.teal.light}`, borderRadius: 16, padding: "4px 10px", fontSize: 11, color: newDanceTask.name === name ? "#fff" : G.teal.dark, cursor: "pointer" }}>
-            {name}
-          </button>
-        ))}
-      </div>
-      <input value={newDanceTask.name} onChange={e => setNewDanceTask({ ...newDanceTask, name: e.target.value })}
-        placeholder="或手动输入动作名称..." style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: `0.5px solid ${G.teal.light}`, fontSize: 13, boxSizing: "border-box", outline: "none" }} />
-    </div>
-
-    {/* 训练量选择 */}
-    <div style={{ marginBottom: 10 }}>
-      <div style={{ fontSize: 11, color: G.gray.mid, marginBottom: 6 }}>训练量</div>
-      <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
-        {[["次数", "reps"], ["秒数", "seconds"], ["组数", "sets"]].map(([label, type]) => (
-          <button key={type} onClick={() => setNewDanceTask({ ...newDanceTask, repsType: type, reps: "" })}
-            style={{ flex: 1, padding: "6px 0", borderRadius: 8, border: `0.5px solid ${newDanceTask.repsType === type ? G.teal.mid : G.gray.light}`, background: newDanceTask.repsType === type ? G.teal.mid : "#fff", color: newDanceTask.repsType === type ? "#fff" : G.gray.dark, fontSize: 12, cursor: "pointer" }}>
-            {label}
-          </button>
-        ))}
-      </div>
-      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-        <input type="number" value={newDanceTask.repsValue || ""} onChange={e => {
-          const val = e.target.value;
-          const unit = newDanceTask.repsType === "seconds" ? "秒" : newDanceTask.repsType === "sets" ? "组" : "次";
-          setNewDanceTask({ ...newDanceTask, repsValue: val, reps: `${val}${unit}` });
-        }} placeholder="输入数量" style={{ flex: 1, padding: "8px 10px", borderRadius: 8, border: `0.5px solid ${G.teal.light}`, fontSize: 13, outline: "none" }} />
-        <span style={{ fontSize: 13, color: G.teal.mid }}>
-          {newDanceTask.repsType === "seconds" ? "秒" : newDanceTask.repsType === "sets" ? "组" : "次"}
-        </span>
-      </div>
-    </div>
-
-    {/* 积分设置 */}
-    <div style={{ marginBottom: 12 }}>
-      <div style={{ fontSize: 11, color: G.gray.mid, marginBottom: 4 }}>积分奖励</div>
-      <div style={{ display: "flex", gap: 6 }}>
-        {[5, 10, 15, 20, 25].map(p => (
-          <button key={p} onClick={() => setNewDanceTask({ ...newDanceTask, points: p })}
-            style={{ flex: 1, padding: "6px 0", borderRadius: 8, border: `0.5px solid ${newDanceTask.points === p ? G.amber.mid : G.gray.light}`, background: newDanceTask.points === p ? G.amber.mid : "#fff", color: newDanceTask.points === p ? "#fff" : G.gray.dark, fontSize: 12, cursor: "pointer" }}>
-            {p}
-          </button>
-        ))}
-      </div>
-    </div>
-
-    <div style={{ display: "flex", gap: 8 }}>
-      <button onClick={() => setShowAddDance(false)} style={{ flex: 1, padding: "8px 0", borderRadius: 8, border: `0.5px solid ${G.gray.light}`, background: "#fff", color: G.gray.mid, fontSize: 13, cursor: "pointer" }}>取消</button>
-      <button onClick={addDanceTask} style={{ flex: 2, padding: "8px 0", borderRadius: 8, border: "none", background: G.teal.mid, color: "#fff", fontSize: 13, fontWeight: 500, cursor: "pointer" }}>确认发布</button>
-    </div>
-  </div>
-)}
-
-        {/* 任务列表 */}
-        {danceTasks.length === 0 && (
-          <div style={{ textAlign: "center", color: G.gray.mid, fontSize: 13, padding: 30 }}>还没有今日任务，点击添加 👆</div>
-        )}
-        {danceTasks.map(t => (
-          <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 10, background: "#fff", borderRadius: 12, padding: "10px 14px", marginBottom: 8, border: `0.5px solid ${G.gray.light}` }}>
-            <span style={{ fontSize: 20 }}>💃</span>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 14, fontWeight: 500, color: G.gray.dark }}>{t.name}</div>
-              <div style={{ fontSize: 12, color: G.gray.mid }}>{t.reps}</div>
-            </div>
-            <span style={{ fontSize: 11, background: G.amber.bg, color: G.amber.dark, padding: "2px 8px", borderRadius: 12 }}>+{t.points}分</span>
-            <button onClick={() => deleteDanceTask(t.id)} style={{ background: "none", border: "none", color: G.gray.mid, fontSize: 18, cursor: "pointer" }}>×</button>
+        {/* 动作选择 */}
+        <div style={{ marginBottom: 8 }}>
+          <div style={{ fontSize: 11, color: G.gray.mid, marginBottom: 6 }}>选择动作</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
+            {["手位基础", "脚位训练", "压腿拉伸", "劈叉练习", "下腰训练", "踢腿练习", "旋转基本功", "跳跃训练", "云手练习", "水袖基础", "扇子基础", "步伐训练", "腰部柔韧", "肩部训练", "头颈训练", "眼神训练", "甩袖练习", "圆场步", "跑跳步", "蹉步练习"].map(name => (
+              <button key={name} onClick={() => setNewDanceTask(prev => ({ ...prev, name }))}
+                style={{ background: newDanceTask.name === name ? G.teal.mid : "#fff", border: `0.5px solid ${newDanceTask.name === name ? G.teal.mid : G.teal.light}`, borderRadius: 16, padding: "4px 10px", fontSize: 11, color: newDanceTask.name === name ? "#fff" : G.teal.dark, cursor: "pointer" }}>
+                {name}
+              </button>
+            ))}
           </div>
-        ))}
+          <input value={newDanceTask.name} onChange={e => setNewDanceTask(prev => ({ ...prev, name: e.target.value }))}
+            placeholder="或手动输入动作名称..." style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: `0.5px solid ${G.teal.light}`, fontSize: 13, boxSizing: "border-box", outline: "none" }} />
+        </div>
+
+        {/* 训练量 */}
+        <div style={{ marginBottom: 8 }}>
+          <div style={{ fontSize: 11, color: G.gray.mid, marginBottom: 6 }}>训练量类型</div>
+          <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+            {[["次数", "reps"], ["秒数", "seconds"], ["组数", "sets"]].map(([label, type]) => (
+              <button key={type} onClick={() => setNewDanceTask(prev => ({ ...prev, repsType: type, reps: "", repsValue: "" }))}
+                style={{ flex: 1, padding: "6px 0", borderRadius: 8, border: `0.5px solid ${newDanceTask.repsType === type ? G.teal.mid : G.gray.light}`, background: newDanceTask.repsType === type ? G.teal.mid : "#fff", color: newDanceTask.repsType === type ? "#fff" : G.gray.dark, fontSize: 12, cursor: "pointer" }}>
+                {label}
+              </button>
+            ))}
+          </div>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <input type="number" value={newDanceTask.repsValue} onChange={e => {
+              const val = e.target.value;
+              const unit = newDanceTask.repsType === "seconds" ? "秒" : newDanceTask.repsType === "sets" ? "组" : "次";
+              setNewDanceTask(prev => ({ ...prev, repsValue: val, reps: `${val}${unit}` }));
+            }} placeholder="输入数量" style={{ flex: 1, padding: "8px 10px", borderRadius: 8, border: `0.5px solid ${G.teal.light}`, fontSize: 13, outline: "none" }} />
+            <span style={{ fontSize: 13, color: G.teal.mid }}>
+              {newDanceTask.repsType === "seconds" ? "秒" : newDanceTask.repsType === "sets" ? "组" : "次"}
+            </span>
+          </div>
+        </div>
+
+        {/* 积分 */}
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ fontSize: 11, color: G.gray.mid, marginBottom: 6 }}>积分奖励</div>
+          <div style={{ display: "flex", gap: 6 }}>
+            {[5, 10, 15, 20, 25].map(p => (
+              <button key={p} onClick={() => setNewDanceTask(prev => ({ ...prev, points: p }))}
+                style={{ flex: 1, padding: "6px 0", borderRadius: 8, border: `0.5px solid ${newDanceTask.points === p ? G.amber.mid : G.gray.light}`, background: newDanceTask.points === p ? G.amber.mid : "#fff", color: newDanceTask.points === p ? "#fff" : G.gray.dark, fontSize: 12, cursor: "pointer" }}>
+                {p}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* 加入列表 */}
+        <button onClick={() => {
+          if (!newDanceTask.name || !newDanceTask.reps) return;
+          setDraftTasks(prev => [...prev, { ...newDanceTask, assigned_to: draftTarget, tempId: Date.now() }]);
+          setNewDanceTask(prev => ({ ...prev, name: "", repsValue: "", reps: "" }));
+        }} style={{ width: "100%", padding: "9px 0", borderRadius: 8, border: "none", background: G.green.mid, color: "#fff", fontSize: 13, fontWeight: 500, cursor: "pointer", marginBottom: 12 }}>
+          + 加入待发布列表
+        </button>
+
+        {/* 待发布预览 */}
+        {draftTasks.length > 0 && (
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: 12, fontWeight: 500, color: G.gray.dark, marginBottom: 6 }}>待发布列表 ({draftTasks.length} 个动作)</div>
+            {draftTasks.map((t, i) => (
+              <div key={t.tempId} style={{ display: "flex", alignItems: "center", gap: 8, background: "#fff", borderRadius: 8, padding: "8px 10px", marginBottom: 6, border: `0.5px solid ${G.gray.light}` }}>
+                <span style={{ fontSize: 16 }}>💃</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 500, color: G.gray.dark }}>{t.name}</div>
+                  <div style={{ fontSize: 11, color: G.gray.mid }}>
+                    {t.reps} · +{t.points}分 · {t.assigned_to ? `👧 ${daughters.find(d => d.id === t.assigned_to)?.nickname}` : "👧👧 全部"}
+                  </div>
+                </div>
+                <button onClick={() => setDraftTasks(prev => prev.filter((_, j) => j !== i))}
+                  style={{ background: "none", border: "none", color: G.red.mid, fontSize: 16, cursor: "pointer" }}>×</button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* 底部按钮 */}
+        <div style={{ display: "flex", gap: 8 }}>
+          <button onClick={() => { setShowAddDance(false); setDraftTasks([]); }}
+            style={{ flex: 1, padding: "9px 0", borderRadius: 8, border: `0.5px solid ${G.gray.light}`, background: "#fff", color: G.gray.mid, fontSize: 13, cursor: "pointer" }}>取消</button>
+          <button onClick={async () => {
+            if (!draftTasks.length) return;
+            const today = new Date().toISOString().split('T')[0];
+            const inserts = draftTasks.map(t => ({
+              name: t.name, reps: t.reps, points: t.points,
+              created_by: user.id, task_date: today,
+              assigned_to: t.assigned_to || null
+            }));
+            const { data, error } = await supabase.from('dance_tasks').insert(inserts).select();
+           
+            if (data && data.length > 0) {
+              setDanceTasks(prev => [...prev, ...data]);
+              setExpandedGroup(data[0]?.assigned_to || "all");
+            }
+            setDraftTasks([]);
+            setNewDanceTask({ name: "", repsType: "reps", repsValue: "", reps: "", points: 10, assigned_to: null });
+            setShowAddDance(false);
+          }} disabled={!draftTasks.length}
+            style={{ flex: 2, padding: "9px 0", borderRadius: 8, border: "none", background: draftTasks.length ? G.teal.mid : G.gray.light, color: "#fff", fontSize: 13, fontWeight: 500, cursor: draftTasks.length ? "pointer" : "default" }}>
+            📢 发布 {draftTasks.length} 个动作
+          </button>
+        </div>
       </div>
     )}
+
+    {/* 任务列表 - 按女儿分组折叠 */}
+    {danceTasks.length === 0 && (
+      <div style={{ textAlign: "center", color: G.gray.mid, fontSize: 13, padding: 30 }}>还没有今日任务，点击添加 👆</div>
+    )}
+
+    {(() => {
+      const groups = {};
+      danceTasks.forEach(t => {
+        const key = t.assigned_to || "all";
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(t);
+      });
+
+      return Object.entries(groups).map(([key, tasks]) => {
+        const daughter = key === "all" ? null : daughters.find(d => d.id === key);
+        const doneCount = tasks.filter(t => danceCheckins.some(c => c.task_id === t.id)).length;
+        const totalPoints = tasks.reduce((s, t) => s + t.points, 0);
+        const expanded = expandedGroup === key;
+
+        return (
+          <div key={key} style={{ marginBottom: 8 }}>
+            <div onClick={() => setExpandedGroup(expanded ? null : key)}
+              style={{ display: "flex", alignItems: "center", gap: 8, background: daughter ? G.pink.bg : G.teal.bg, borderRadius: expanded ? "12px 12px 0 0" : 12, padding: "10px 14px", border: `1px solid ${daughter ? G.pink.light : G.teal.light}`, borderBottom: expanded ? "none" : undefined, cursor: "pointer" }}>
+              <span style={{ fontSize: 18 }}>👧</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 500, fontSize: 13, color: daughter ? G.pink.dark : G.teal.dark }}>
+                  {daughter ? daughter.nickname : "全部女儿"}
+                </div>
+                <div style={{ fontSize: 11, color: daughter ? G.pink.mid : G.teal.mid }}>
+                  {tasks.length}个动作 · {totalPoints}积分 · 完成{doneCount}/{tasks.length}
+                </div>
+              </div>
+              <div style={{ width: 36, height: 36, borderRadius: 18, background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 500, color: doneCount === tasks.length ? G.green.mid : G.gray.mid, border: `2px solid ${doneCount === tasks.length ? G.green.mid : G.gray.light}` }}>
+                {Math.round(doneCount / tasks.length * 100)}%
+              </div>
+              <span style={{ fontSize: 12, color: G.gray.mid }}>{expanded ? "▲" : "▼"}</span>
+            </div>
+
+            {expanded && (
+              <div style={{ border: `1px solid ${daughter ? G.pink.light : G.teal.light}`, borderRadius: "0 0 12px 12px", overflow: "hidden" }}>
+                {tasks.map((t, i) => {
+                  const done = danceCheckins.some(c => c.task_id === t.id);
+                  return (
+                    <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 8, background: done ? G.green.bg : "#fff", padding: "8px 12px", borderBottom: i < tasks.length - 1 ? `0.5px solid ${G.gray.light}` : "none" }}>
+                      <div style={{ width: 18, height: 18, borderRadius: 9, background: done ? G.green.mid : G.gray.light, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: "#fff", flexShrink: 0 }}>
+                        {done ? "✓" : i + 1}
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 13, fontWeight: 500, color: done ? G.green.dark : G.gray.dark }}>{t.name}</div>
+                        <div style={{ fontSize: 11, color: G.gray.mid }}>{t.reps}</div>
+                      </div>
+                      <span style={{ fontSize: 11, background: G.amber.bg, color: G.amber.dark, padding: "2px 6px", borderRadius: 10 }}>+{t.points}</span>
+                      <button onClick={() => deleteDanceTask(t.id)} style={{ background: "none", border: "none", color: G.gray.light, fontSize: 14, cursor: "pointer" }}>×</button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      });
+    })()}
+  </div>
+)}
   </div>
 )}
 
