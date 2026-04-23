@@ -376,7 +376,71 @@ function AuthScreen({ onAuth }) {
     </div>
   );
 }
-function ProfileTab({ user, onSignOut }) {
+
+function AdminPanel({ user }) {
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  async function loadUsers() {
+    setLoading(true);
+    const { data } = await supabase.from('profiles').select('id, nickname, avatar_emoji, role');
+    if (data) setUsers(data);
+    setLoading(false);
+  }
+
+  async function updateRole(id, role) {
+    await supabase.from('profiles').update({ role }).eq('id', id);
+    setUsers(prev => prev.map(u => u.id === id ? { ...u, role } : u));
+  }
+
+  useEffect(() => { loadUsers(); }, []);
+
+  const roleColor = (role) => {
+    if (role === 'admin') return G.blue;
+    if (role === 'mom') return G.teal;
+    return G.pink;
+  };
+
+  const roleLabel = (role) => {
+    if (role === 'admin') return '👑 管理员';
+    if (role === 'mom') return '👩 妈妈';
+    return '👧 女儿';
+  };
+
+  return (
+    <div style={{ marginTop: 14 }}>
+      <div style={{ background: G.blue.bg, borderRadius: 12, padding: "14px 16px", border: `1px solid ${G.blue.light}` }}>
+        <div style={{ fontSize: 13, fontWeight: 500, color: G.blue.dark, marginBottom: 12 }}>👑 管理员面板 — 账号角色管理</div>
+        {loading && <div style={{ fontSize: 13, color: G.gray.mid, textAlign: "center" }}>加载中...</div>}
+        {users.map(u => (
+          <div key={u.id} style={{ background: "#fff", borderRadius: 10, padding: "10px 12px", marginBottom: 8, border: `0.5px solid ${G.gray.light}` }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+              <span style={{ fontSize: 20 }}>{u.avatar_emoji || "🙂"}</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 13, fontWeight: 500, color: G.gray.dark }}>{u.nickname || "未设置昵称"}</div>
+                <div style={{ fontSize: 10, color: G.gray.mid }}>{u.id.slice(0, 8)}...</div>
+              </div>
+              <span style={{ fontSize: 11, background: roleColor(u.role).bg, color: roleColor(u.role).dark, padding: "2px 8px", borderRadius: 12 }}>
+                {roleLabel(u.role)}
+              </span>
+            </div>
+            <div style={{ display: "flex", gap: 6 }}>
+              {[["admin", "👑 管理员"], ["mom", "👩 妈妈"], ["daughter", "👧 女儿"]].map(([val, label]) => (
+                <button key={val} onClick={() => updateRole(u.id, val)} style={{ flex: 1, padding: "5px 0", borderRadius: 8, border: `0.5px solid ${u.role === val ? roleColor(val).mid : G.gray.light}`, background: u.role === val ? roleColor(val).mid : "#fff", color: u.role === val ? "#fff" : G.gray.mid, fontSize: 11, cursor: "pointer" }}>
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
+        <button onClick={loadUsers} style={{ width: "100%", padding: "8px 0", borderRadius: 8, border: `0.5px solid ${G.blue.light}`, background: G.blue.bg, color: G.blue.dark, fontSize: 12, cursor: "pointer", marginTop: 4 }}>
+          🔄 刷新列表
+        </button>
+      </div>
+    </div>
+  );
+}
+function ProfileTab({ user, onSignOut, profile, setProfile }) {
   const [height, setHeight] = useState(localStorage.getItem("hf_height") || "");
   const [weight, setWeight] = useState(localStorage.getItem("hf_weight") || "");
   const [age, setAge] = useState(localStorage.getItem("hf_age") || "");
@@ -533,6 +597,9 @@ function ProfileTab({ user, onSignOut }) {
       <button onClick={save} style={{ width: "100%", padding: "12px 0", borderRadius: 12, border: "none", background: saved ? G.teal.mid : G.green.mid, color: "#fff", fontWeight: 500, fontSize: 15, cursor: "pointer" }}>
         {saved ? "✓ 已保存" : "保存设置"}
       </button>
+      {profile?.role === 'admin' && (
+        <AdminPanel user={user} />
+      )}
     </div>
   );
 }
@@ -553,6 +620,7 @@ export default function App() {
   const [danceRole, setDanceRole] = useState("daughter");
   const [totalDancePoints, setTotalDancePoints] = useState(0);
   const [pastTasks, setPastTasks] = useState([]);
+  const [daughters, setDaughters] = useState([]);
  
   const [socialTab, setSocialTab] = useState("friends");
   const [friends, setFriends] = useState([]);
@@ -587,7 +655,7 @@ export default function App() {
   const [recipeCategory, setRecipeCategory] = useState("all");
   const [showAddEx, setShowAddEx] = useState(false);
   const [newEx, setNewEx] = useState({ name: "", icon: "🏃", duration: 30, cal: 0, preset: null });
-  useEffect(() => {
+useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       setAuthLoading(false);
@@ -603,7 +671,9 @@ useEffect(() => {
   if (!user || tab !== "dance") return;
   const today = new Date().toISOString().split('T')[0];
   const run = async () => {
-    const { data } = await supabase.from('dance_tasks').select('*').eq('task_date', today).order('created_at');
+    const { data } = await supabase.from('dance_tasks').select('*').eq('task_date', today)
+  .or(`assigned_to.eq.${user.id},assigned_to.is.null`)
+  .order('created_at');
     if (data) setDanceTasks(data);
     const { data: checkins } = await supabase.from('dance_checkins').select('*').eq('user_id', user.id).eq('task_date', today);
     if (checkins) setDanceCheckins(checkins);
@@ -623,14 +693,28 @@ useEffect(() => {
 
 useEffect(() => {
   if (!user) return;
-  const sub = supabase.channel('messages')
+  const sub = supabase.channel('messages-channel')
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
       if (payload.new.receiver_id === user.id || payload.new.sender_id === user.id) {
-        setMessages(prev => [...prev, payload.new]);
+        setMessages(prev => {
+          if (prev.find(m => m.id === payload.new.id)) return prev;
+          return [...prev, payload.new];
+        });
       }
     }).subscribe();
-  return () => supabase.removeChannel(sub);
-}, [user]);
+
+  // 轮询备用：每5秒刷新一次
+  const poll = setInterval(() => {
+    if (activeFriend) loadMessages(activeFriend.friendId);
+  }, 5000);
+
+  return () => {
+    supabase.removeChannel(sub);
+    clearInterval(poll);
+  };
+}, [user, activeFriend]); // eslint-disable-line react-hooks/exhaustive-deps
+
+useEffect(() => { if (user) loadDaughters(); }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
 useEffect(() => {
   if (!user || initialized) return;
@@ -681,6 +765,10 @@ async function loadProfile() {
     const { data: newP } = await supabase.from('profiles').insert([{ id: user.id, nickname: user.email.split('@')[0] }]).select().single();
     if (newP) setProfile(newP);
   }
+}
+async function loadDaughters() {
+  const { data } = await supabase.from('profiles').select('id, nickname, avatar_emoji').eq('role', 'daughter');
+  if (data) setDaughters(data);
 }
 
 async function loadFriends() {
@@ -767,10 +855,11 @@ async function addDanceTask() {
   if (!newDanceTask.name || !newDanceTask.reps) return;
   const today = new Date().toISOString().split('T')[0];
   const { data } = await supabase.from('dance_tasks').insert([{
-    name: newDanceTask.name, reps: newDanceTask.reps,
-    points: parseInt(newDanceTask.points) || 10,
-    created_by: user.id, task_date: today
-  }]).select();
+  name: newDanceTask.name, reps: newDanceTask.reps,
+  points: parseInt(newDanceTask.points) || 10,
+  created_by: user.id, task_date: today,
+  assigned_to: newDanceTask.assigned_to || null
+}]).select();
   if (data) setDanceTasks(prev => [...prev, ...data]);
   setNewDanceTask({ name: "", reps: "", points: 10 });
   setShowAddDance(false);
@@ -1303,38 +1392,87 @@ async function addExercise() {
         </div>
 
         {showAddDance && (
-          <div style={{ background: G.teal.bg, borderRadius: 12, padding: 14, marginBottom: 12, border: `1px solid ${G.teal.light}` }}>
-            <div style={{ fontSize: 13, fontWeight: 500, color: G.teal.dark, marginBottom: 10 }}>添加训练动作</div>
-            <div style={{ marginBottom: 8 }}>
-              <div style={{ fontSize: 11, color: G.gray.mid, marginBottom: 4 }}>动作名称</div>
-              <input value={newDanceTask.name} onChange={e => setNewDanceTask({ ...newDanceTask, name: e.target.value })} placeholder="如：压腿拉伸" style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: `0.5px solid ${G.teal.light}`, fontSize: 13, boxSizing: "border-box", outline: "none" }} />
-            </div>
-            <div style={{ marginBottom: 8 }}>
-              <div style={{ fontSize: 11, color: G.gray.mid, marginBottom: 4 }}>次数/组数</div>
-              <input value={newDanceTask.reps} onChange={e => setNewDanceTask({ ...newDanceTask, reps: e.target.value })} placeholder="如：每腿 3×30秒" style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: `0.5px solid ${G.teal.light}`, fontSize: 13, boxSizing: "border-box", outline: "none" }} />
-            </div>
-            <div style={{ marginBottom: 10 }}>
-              <div style={{ fontSize: 11, color: G.gray.mid, marginBottom: 4 }}>积分奖励</div>
-              <input type="number" value={newDanceTask.points} onChange={e => setNewDanceTask({ ...newDanceTask, points: e.target.value })} style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: `0.5px solid ${G.teal.light}`, fontSize: 13, boxSizing: "border-box", outline: "none" }} />
-            </div>
+  <div style={{ background: G.teal.bg, borderRadius: 12, padding: 14, marginBottom: 12, border: `1px solid ${G.teal.light}` }}>
+    <div style={{ fontSize: 13, fontWeight: 500, color: G.teal.dark, marginBottom: 10 }}>添加训练动作</div>
 
-            {pastTasks.length > 0 && (
-              <div style={{ marginBottom: 10 }}>
-                <div style={{ fontSize: 11, color: G.gray.mid, marginBottom: 6 }}>快速选择历史动作</div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                  {pastTasks.map(name => (
-                    <button key={name} onClick={() => setNewDanceTask({ ...newDanceTask, name })} style={{ background: "#fff", border: `0.5px solid ${G.teal.light}`, borderRadius: 16, padding: "4px 10px", fontSize: 11, color: G.teal.dark, cursor: "pointer" }}>{name}</button>
-                  ))}
-                </div>
-              </div>
-            )}
+    {/* 选择女儿 */}
+    <div style={{ marginBottom: 10 }}>
+      <div style={{ fontSize: 11, color: G.gray.mid, marginBottom: 6 }}>分配给</div>
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+        <button onClick={() => setNewDanceTask({ ...newDanceTask, assigned_to: null })}
+          style={{ padding: "6px 12px", borderRadius: 16, border: `0.5px solid ${!newDanceTask.assigned_to ? G.teal.mid : G.gray.light}`, background: !newDanceTask.assigned_to ? G.teal.mid : "#fff", color: !newDanceTask.assigned_to ? "#fff" : G.gray.dark, fontSize: 12, cursor: "pointer" }}>
+          👧👧 全部女儿
+        </button>
+        {daughters.map(d => (
+          <button key={d.id} onClick={() => setNewDanceTask({ ...newDanceTask, assigned_to: d.id })}
+            style={{ padding: "6px 12px", borderRadius: 16, border: `0.5px solid ${newDanceTask.assigned_to === d.id ? G.pink.mid : G.gray.light}`, background: newDanceTask.assigned_to === d.id ? G.pink.mid : "#fff", color: newDanceTask.assigned_to === d.id ? "#fff" : G.gray.dark, fontSize: 12, cursor: "pointer" }}>
+            👧 {d.nickname}
+          </button>
+        ))}
+      </div>
+    </div>
 
-            <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={() => setShowAddDance(false)} style={{ flex: 1, padding: "8px 0", borderRadius: 8, border: `0.5px solid ${G.gray.light}`, background: "#fff", color: G.gray.mid, fontSize: 13, cursor: "pointer" }}>取消</button>
-              <button onClick={addDanceTask} style={{ flex: 2, padding: "8px 0", borderRadius: 8, border: "none", background: G.teal.mid, color: "#fff", fontSize: 13, fontWeight: 500, cursor: "pointer" }}>确认发布</button>
-            </div>
-          </div>
-        )}
+    {/* 动作名称 - 预设选择 */}
+    <div style={{ marginBottom: 8 }}>
+      <div style={{ fontSize: 11, color: G.gray.mid, marginBottom: 6 }}>选择动作</div>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
+        {[...new Set([
+          "压腿拉伸", "劈叉练习", "下腰训练", "踢腿练习",
+          "旋转基本功", "手位练习", "跳跃训练", "柔韧拉伸",
+          ...pastTasks
+        ])].map(name => (
+          <button key={name} onClick={() => setNewDanceTask({ ...newDanceTask, name })}
+            style={{ background: newDanceTask.name === name ? G.teal.mid : "#fff", border: `0.5px solid ${newDanceTask.name === name ? G.teal.mid : G.teal.light}`, borderRadius: 16, padding: "4px 10px", fontSize: 11, color: newDanceTask.name === name ? "#fff" : G.teal.dark, cursor: "pointer" }}>
+            {name}
+          </button>
+        ))}
+      </div>
+      <input value={newDanceTask.name} onChange={e => setNewDanceTask({ ...newDanceTask, name: e.target.value })}
+        placeholder="或手动输入动作名称..." style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: `0.5px solid ${G.teal.light}`, fontSize: 13, boxSizing: "border-box", outline: "none" }} />
+    </div>
+
+    {/* 训练量选择 */}
+    <div style={{ marginBottom: 10 }}>
+      <div style={{ fontSize: 11, color: G.gray.mid, marginBottom: 6 }}>训练量</div>
+      <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+        {[["次数", "reps"], ["秒数", "seconds"], ["组数", "sets"]].map(([label, type]) => (
+          <button key={type} onClick={() => setNewDanceTask({ ...newDanceTask, repsType: type, reps: "" })}
+            style={{ flex: 1, padding: "6px 0", borderRadius: 8, border: `0.5px solid ${newDanceTask.repsType === type ? G.teal.mid : G.gray.light}`, background: newDanceTask.repsType === type ? G.teal.mid : "#fff", color: newDanceTask.repsType === type ? "#fff" : G.gray.dark, fontSize: 12, cursor: "pointer" }}>
+            {label}
+          </button>
+        ))}
+      </div>
+      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <input type="number" value={newDanceTask.repsValue || ""} onChange={e => {
+          const val = e.target.value;
+          const unit = newDanceTask.repsType === "seconds" ? "秒" : newDanceTask.repsType === "sets" ? "组" : "次";
+          setNewDanceTask({ ...newDanceTask, repsValue: val, reps: `${val}${unit}` });
+        }} placeholder="输入数量" style={{ flex: 1, padding: "8px 10px", borderRadius: 8, border: `0.5px solid ${G.teal.light}`, fontSize: 13, outline: "none" }} />
+        <span style={{ fontSize: 13, color: G.teal.mid }}>
+          {newDanceTask.repsType === "seconds" ? "秒" : newDanceTask.repsType === "sets" ? "组" : "次"}
+        </span>
+      </div>
+    </div>
+
+    {/* 积分设置 */}
+    <div style={{ marginBottom: 12 }}>
+      <div style={{ fontSize: 11, color: G.gray.mid, marginBottom: 4 }}>积分奖励</div>
+      <div style={{ display: "flex", gap: 6 }}>
+        {[5, 10, 15, 20, 25].map(p => (
+          <button key={p} onClick={() => setNewDanceTask({ ...newDanceTask, points: p })}
+            style={{ flex: 1, padding: "6px 0", borderRadius: 8, border: `0.5px solid ${newDanceTask.points === p ? G.amber.mid : G.gray.light}`, background: newDanceTask.points === p ? G.amber.mid : "#fff", color: newDanceTask.points === p ? "#fff" : G.gray.dark, fontSize: 12, cursor: "pointer" }}>
+            {p}
+          </button>
+        ))}
+      </div>
+    </div>
+
+    <div style={{ display: "flex", gap: 8 }}>
+      <button onClick={() => setShowAddDance(false)} style={{ flex: 1, padding: "8px 0", borderRadius: 8, border: `0.5px solid ${G.gray.light}`, background: "#fff", color: G.gray.mid, fontSize: 13, cursor: "pointer" }}>取消</button>
+      <button onClick={addDanceTask} style={{ flex: 2, padding: "8px 0", borderRadius: 8, border: "none", background: G.teal.mid, color: "#fff", fontSize: 13, fontWeight: 500, cursor: "pointer" }}>确认发布</button>
+    </div>
+  </div>
+)}
 
         {/* 任务列表 */}
         {danceTasks.length === 0 && (
@@ -1525,7 +1663,7 @@ async function addExercise() {
   </div>
 )}
         {tab === "profile" && (
-        <ProfileTab user={user} onSignOut={signOut} />
+        <ProfileTab user={user} onSignOut={signOut} profile={profile} setProfile={setProfile} />
        )}
       </div>
 
