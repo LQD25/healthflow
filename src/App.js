@@ -621,7 +621,8 @@ export default function App() {
   const [draftTarget, setDraftTarget] = useState(null);
   const [danceRole, setDanceRole] = useState("daughter");
   const [totalDancePoints, setTotalDancePoints] = useState(0);
-  const [pastTasks, setPastTasks] = useState([]);
+  //下面多了个下划线_
+  const [_pastTasks, setPastTasks] = useState([]);
   const [daughters, setDaughters] = useState([]);
   const [expandedGroup, setExpandedGroup] = useState(null);
  
