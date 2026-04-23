@@ -621,8 +621,7 @@ export default function App() {
   const [draftTarget, setDraftTarget] = useState(null);
   const [danceRole, setDanceRole] = useState("daughter");
   const [totalDancePoints, setTotalDancePoints] = useState(0);
-  //下面多了个下划线_
-  const [_pastTasks, setPastTasks] = useState([]);
+ 
   const [daughters, setDaughters] = useState([]);
   const [expandedGroup, setExpandedGroup] = useState(null);
  
@@ -686,7 +685,7 @@ useEffect(() => {
     const { data: points } = await supabase.from('dance_points').select('points').eq('user_id', user.id);
     if (points) setTotalDancePoints(points.reduce((s, p) => s + p.points, 0));
     const { data: past } = await supabase.from('dance_tasks').select('name').order('created_at', { ascending: false });
-    if (past) setPastTasks([...new Set(past.map(t => t.name))].slice(0, 10));
+   
     const { data: hist } = await supabase.from('dance_checkins').select('task_date, task_id').eq('user_id', user.id).order('task_date', { ascending: false });
     if (hist) {
       const byDate = {};
