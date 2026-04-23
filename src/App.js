@@ -775,6 +775,27 @@ async function loadDaughters() {
   if (data) setDaughters(data);
 }
 
+async function toggleDanceTask(task) {
+  const today = new Date().toISOString().split('T')[0];
+  const existing = danceCheckins.find(c => c.task_id === task.id);
+  if (existing) {
+    await supabase.from('dance_checkins').delete().eq('id', existing.id);
+    setDanceCheckins(prev => prev.filter(c => c.id !== existing.id));
+    setTotalDancePoints(prev => prev - task.points);
+  } else {
+    const { data } = await supabase.from('dance_checkins').insert([{
+      task_id: task.id, user_id: user.id, task_date: today
+    }]).select();
+    if (data) {
+      setDanceCheckins(prev => [...prev, ...data]);
+      await supabase.from('dance_points').insert([{
+        user_id: user.id, points: task.points, reason: task.name
+      }]);
+      setTotalDancePoints(prev => prev + task.points);
+    }
+  }
+}
+
 async function loadFriends() {
   const { data } = await supabase.from('friendships')
     .select('*')
@@ -838,22 +859,6 @@ function getFriendInfo(f) {
 }
 
 
-/* async function toggleDanceTask(task) {
-  const today = new Date().toISOString().split('T')[0];
-  const existing = danceCheckins.find(c => c.task_id === task.id);
-  if (existing) {
-    await supabase.from('dance_checkins').delete().eq('id', existing.id);
-    setDanceCheckins(prev => prev.filter(c => c.id !== existing.id));
-    setTotalDancePoints(prev => prev - task.points);
-  } else {
-    const { data } = await supabase.from('dance_checkins').insert([{ task_id: task.id, user_id: user.id, task_date: today }]).select();
-    if (data) {
-      setDanceCheckins(prev => [...prev, ...data]);
-      await supabase.from('dance_points').insert([{ user_id: user.id, points: task.points, reason: task.name }]);
-      setTotalDancePoints(prev => prev + task.points);
-    }
-  }
-}*/
 
 
 async function deleteDanceTask(id) {
@@ -1297,125 +1302,85 @@ async function addExercise() {
     {/* 角色标题 */}
 <div style={{ background: profile?.role === "mom" ? G.teal.bg : G.pink.bg, borderRadius: 12, padding: "10px 14px", marginBottom: 14, border: `1px solid ${profile?.role === "mom" ? G.teal.light : G.pink.light}` }}>
   <div style={{ fontSize: 13, fontWeight: 500, color: profile?.role === "mom" ? G.teal.dark : G.pink.dark }}>
-    {profile?.role === "mom" ? "👩 妈妈管理台" : "👧 女儿打卡"}
+    {profile?.role === "mom" ? "👩 妈妈管理台" : "👧 " + (profile?.nickname || "女儿") + "打卡"}
   </div>
 </div>
 
     {/* 女儿打卡视图 */}
     {danceRole === "daughter" && (
-      <div>
-        {/* 积分头部 */}
-        <div style={{ background: `linear-gradient(135deg, ${G.pink.mid}, ${G.purple.mid})`, borderRadius: 14, padding: "16px", marginBottom: 14, color: "#fff" }}>
-          <div style={{ fontSize: 12, opacity: 0.85 }}>累计积分</div>
-          <div style={{ fontWeight: 500, fontSize: 32, marginTop: 2 }}>⭐ {totalDancePoints}</div>
-          <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
-            <div style={{ background: "rgba(255,255,255,0.2)", borderRadius: 16, padding: "4px 12px", fontSize: 12 }}>
-              今日完成 {danceCheckins.length}/{danceTasks.length}
-            </div>
-            <div style={{ background: "rgba(255,255,255,0.2)", borderRadius: 16, padding: "4px 12px", fontSize: 12 }}>
-              今日 +{danceCheckins.reduce((s, c) => { const t = danceTasks.find(t => t.id === c.task_id); return s + (t?.points || 0); }, 0)} 分
-            </div>
-          </div>
+  <div>
+    {/* 积分头部 */}
+    <div style={{ background: `linear-gradient(135deg, ${G.pink.mid}, ${G.purple.mid})`, borderRadius: 14, padding: "16px", marginBottom: 14, color: "#fff" }}>
+      <div style={{ fontSize: 12, opacity: 0.85 }}>累计积分</div>
+      <div style={{ fontWeight: 500, fontSize: 32, marginTop: 2 }}>⭐ {totalDancePoints}</div>
+      <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
+        <div style={{ background: "rgba(255,255,255,0.2)", borderRadius: 16, padding: "4px 12px", fontSize: 12 }}>
+          今日完成 {danceCheckins.length}/{danceTasks.length}
         </div>
-
-        {/* 进度条 */}
-        {danceTasks.length > 0 && (
-          <div style={{ marginBottom: 14 }}>
-            <div style={{ height: 8, background: "#E0E0E0", borderRadius: 4, overflow: "hidden" }}>
-              <div style={{ height: "100%", width: `${danceCheckins.length / danceTasks.length * 100}%`, background: `linear-gradient(to right, ${G.pink.mid}, ${G.purple.mid})`, borderRadius: 4, transition: "width 0.5s" }} />
-            </div>
-            {danceCheckins.length === danceTasks.length && danceTasks.length > 0 && (
-              <div style={{ textAlign: "center", marginTop: 8, fontSize: 14, color: G.green.dark, fontWeight: 500 }}>🎉 太棒了！今日训练全部完成！</div>
-            )}
-          </div>
-        )}
-
-{danceTasks.length === 0 && (
-  <div style={{ textAlign: "center", color: G.gray.mid, fontSize: 13, padding: 30 }}>还没有今日任务，点击添加 👆</div>
-)}
-
-{(() => {
-  const groups = {};
-  danceTasks.forEach(t => {
-    const key = t.assigned_to || "all";
-    if (!groups[key]) groups[key] = [];
-    groups[key].push(t);
-  });
-
-  return Object.entries(groups).map(([key, tasks]) => {
-    const daughter = key === "all" ? null : daughters.find(d => d.id === key);
-    const doneCount = tasks.filter(t => danceCheckins.some(c => c.task_id === t.id)).length;
-    const totalPoints = tasks.reduce((s, t) => s + t.points, 0);
-    const expanded = expandedGroup === key;
-
-    return (
-      <div key={key} style={{ marginBottom: 8 }}>
-        {/* 折叠标题 */}
-        <div onClick={() => setExpandedGroup(expanded ? null : key)}
-          style={{ display: "flex", alignItems: "center", gap: 8, background: daughter ? G.pink.bg : G.teal.bg, borderRadius: expanded ? "12px 12px 0 0" : 12, padding: "10px 14px", border: `1px solid ${daughter ? G.pink.light : G.teal.light}`, borderBottom: expanded ? "none" : undefined, cursor: "pointer" }}>
-          <span style={{ fontSize: 18 }}>👧</span>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 500, fontSize: 13, color: daughter ? G.pink.dark : G.teal.dark }}>
-              {daughter ? daughter.nickname : "全部女儿"}
-            </div>
-            <div style={{ fontSize: 11, color: daughter ? G.pink.mid : G.teal.mid }}>
-              {tasks.length}个动作 · {totalPoints}积分 · 完成{doneCount}/{tasks.length}
-            </div>
-          </div>
-          <div style={{ width: 36, height: 36, borderRadius: 18, background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 500, color: doneCount === tasks.length ? G.green.mid : G.gray.mid, border: `2px solid ${doneCount === tasks.length ? G.green.mid : G.gray.light}` }}>
-            {Math.round(doneCount / tasks.length * 100)}%
-          </div>
-          <span style={{ fontSize: 12, color: G.gray.mid }}>{expanded ? "▲" : "▼"}</span>
+        <div style={{ background: "rgba(255,255,255,0.2)", borderRadius: 16, padding: "4px 12px", fontSize: 12 }}>
+          今日 +{danceCheckins.reduce((s, c) => { const t = danceTasks.find(tk => tk.id === c.task_id); return s + (t?.points || 0); }, 0)} 分
         </div>
-
-        {/* 展开内容 */}
-        {expanded && (
-          <div style={{ border: `1px solid ${daughter ? G.pink.light : G.teal.light}`, borderRadius: "0 0 12px 12px", overflow: "hidden" }}>
-            {tasks.map((t, i) => {
-              const done = danceCheckins.some(c => c.task_id === t.id);
-              return (
-                <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 8, background: done ? G.green.bg : "#fff", padding: "8px 12px", borderBottom: i < tasks.length - 1 ? `0.5px solid ${G.gray.light}` : "none" }}>
-                  <div style={{ width: 18, height: 18, borderRadius: 9, background: done ? G.green.mid : G.gray.light, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: "#fff", flexShrink: 0 }}>
-                    {done ? "✓" : i + 1}
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 13, fontWeight: 500, color: done ? G.green.dark : G.gray.dark }}>{t.name}</div>
-                    <div style={{ fontSize: 11, color: G.gray.mid }}>{t.reps}</div>
-                  </div>
-                  <span style={{ fontSize: 11, background: G.amber.bg, color: G.amber.dark, padding: "2px 6px", borderRadius: 10 }}>+{t.points}</span>
-                  <button onClick={() => deleteDanceTask(t.id)} style={{ background: "none", border: "none", color: G.gray.light, fontSize: 14, cursor: "pointer" }}>×</button>
-                </div>
-              );
-            })}
-          </div>
-        )}
       </div>
-    );
-  });
-})()}
+    </div>
 
-        {/* 历史记录 */}
-        {danceHistory.length > 0 && (
-          <div>
-            <div style={{ fontSize: 13, fontWeight: 500, color: G.gray.dark, marginBottom: 8 }}>近期打卡记录</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {danceHistory.map((h, i) => (
-                <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, background: "#fff", borderRadius: 10, padding: "10px 12px", border: `0.5px solid ${G.gray.light}` }}>
-                  <div style={{ fontSize: 12, color: G.gray.mid, width: 70 }}>{h.date}</div>
-                  <div style={{ flex: 1, height: 6, background: "#E0E0E0", borderRadius: 3, overflow: "hidden" }}>
-                    <div style={{ height: "100%", width: `${Math.min(100, h.count / Math.max(...danceHistory.map(d => d.count)) * 100)}%`, background: G.pink.mid, borderRadius: 3 }} />
-                  </div>
-                  <div style={{ fontSize: 12, color: G.pink.mid }}>{h.count} 项</div>
-                </div>
-              ))}
-            </div>
-          </div>
+    {/* 进度条 */}
+    {danceTasks.length > 0 && (
+      <div style={{ marginBottom: 14 }}>
+        <div style={{ height: 8, background: "#E0E0E0", borderRadius: 4, overflow: "hidden" }}>
+          <div style={{ height: "100%", width: `${danceCheckins.length / danceTasks.length * 100}%`, background: `linear-gradient(to right, ${G.pink.mid}, ${G.purple.mid})`, borderRadius: 4, transition: "width 0.5s" }} />
+        </div>
+        {danceCheckins.length === danceTasks.length && danceTasks.length > 0 && (
+          <div style={{ textAlign: "center", marginTop: 8, fontSize: 14, color: G.green.dark, fontWeight: 500 }}>🎉 太棒了！今日训练全部完成！</div>
         )}
       </div>
     )}
 
-    {/* 妈妈管理视图 */}
+    {/* 任务列表 */}
+    <div style={{ fontSize: 13, fontWeight: 500, color: G.gray.dark, marginBottom: 8 }}>今日训练任务</div>
+    {danceTasks.length === 0 && (
+      <div style={{ textAlign: "center", color: G.gray.mid, fontSize: 13, padding: 30 }}>今日还没有训练任务，等妈妈发布 💃</div>
+    )}
+    <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 }}>
+      {danceTasks.map(t => {
+        const done = danceCheckins.some(c => c.task_id === t.id);
+        return (
+          <div key={t.id} onClick={() => toggleDanceTask(t)} style={{ display: "flex", alignItems: "center", gap: 12, background: done ? G.pink.bg : "#fff", borderRadius: 12, padding: "12px 14px", cursor: "pointer", border: `1px solid ${done ? G.pink.light : G.gray.light}` }}>
+            <div style={{ width: 24, height: 24, borderRadius: 12, border: `2px solid ${done ? G.pink.mid : G.gray.light}`, background: done ? G.pink.mid : "transparent", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, color: "#fff", flexShrink: 0 }}>
+              {done ? "✓" : ""}
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 500, fontSize: 14, color: done ? G.pink.dark : G.gray.dark }}>{t.name}</div>
+              <div style={{ fontSize: 12, color: G.gray.mid }}>{t.reps}</div>
+            </div>
+            <div style={{ background: G.amber.bg, borderRadius: 12, padding: "3px 8px", fontSize: 11, color: G.amber.dark, fontWeight: 500 }}>+{t.points}分</div>
+          </div>
+        );
+      })}
+    </div>
+
+    {/* 历史记录 */}
+    {danceHistory.length > 0 && (
+      <div>
+        <div style={{ fontSize: 13, fontWeight: 500, color: G.gray.dark, marginBottom: 8 }}>近期打卡记录</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          {danceHistory.map((h, i) => (
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, background: "#fff", borderRadius: 10, padding: "10px 12px", border: `0.5px solid ${G.gray.light}` }}>
+              <div style={{ fontSize: 12, color: G.gray.mid, width: 70 }}>{h.date}</div>
+              <div style={{ flex: 1, height: 6, background: "#E0E0E0", borderRadius: 3, overflow: "hidden" }}>
+                <div style={{ height: "100%", width: `${Math.min(100, h.count / Math.max(...danceHistory.map(d => d.count)) * 100)}%`, background: G.pink.mid, borderRadius: 3 }} />
+              </div>
+              <div style={{ fontSize: 12, color: G.pink.mid }}>{h.count} 项</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    )}
+  </div>
+)}
+
+{/* 妈妈管理视图 */}
 {danceRole === "mom" && (
+
   <div>
     {/* 添加任务按钮 */}
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
